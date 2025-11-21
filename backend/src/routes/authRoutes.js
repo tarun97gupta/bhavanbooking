@@ -130,7 +130,7 @@ router.get('/me', protectRoute, async (req, res) => {
         return res.status(200).json({
             success: true,
             user: {
-                _id: user._id,
+                id: user._id,
                 fullName: user.fullName,
                 email: user.email || null,
                 phoneNumber: user.phoneNumber,

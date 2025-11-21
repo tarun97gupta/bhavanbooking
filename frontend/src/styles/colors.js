@@ -18,7 +18,7 @@ const colors = {
     secondaryLight: '#FCD34D',
     
     // Neutrals
-    background: '#FFFFFF',     // White background
+    background: '#F9FAFB',     // White background
     surface: '#F9FAFB',        // Light gray surface
     card: '#FFFFFF',           // Card background
     
@@ -30,7 +30,9 @@ const colors = {
     
     // Status colors
     success: '#10B981',        // Green
-    error: '#EF4444',          // Red
+    successLight: '#D1FAE5',   //Light green
+    error: '#DC2626',          // Red
+    errorLight: '#FEE2E2',    //Light red
     warning: '#F59E0B',        // Amber
     info: '#3B82F6',           // Blue
     

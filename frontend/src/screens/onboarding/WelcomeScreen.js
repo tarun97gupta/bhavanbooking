@@ -11,11 +11,11 @@ import {
 import colors from '../../styles/colors';
 import spacing from '../../styles/spacing';
 
-const WelcomeScreen = ({ onGetStarted }) => {
+const WelcomeScreen = ({ navigation, onGetStarted }) => {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
-      
+
       {/* Background Image - Full Screen */}
       <ImageBackground
         source={require('../../../assets/MainEntrance.jpg')}
@@ -23,7 +23,7 @@ const WelcomeScreen = ({ onGetStarted }) => {
         resizeMode="cover"
       >
         {/* Logo - Top Left */}
-        <Image 
+        <Image
           source={require('../../../assets/SplashScreenLogo.png')}
           style={styles.logo}
           resizeMode="contain"
@@ -33,7 +33,7 @@ const WelcomeScreen = ({ onGetStarted }) => {
         <View style={styles.bottomContainer}>
           {/* Semi-transparent overlay */}
           <View style={styles.overlay} />
-          
+
           {/* Content */}
           <View style={styles.content}>
             {/* Text Content - Top */}
@@ -48,7 +48,14 @@ const WelcomeScreen = ({ onGetStarted }) => {
             <TouchableOpacity
               style={styles.button}
               activeOpacity={0.8}
-              onPress={onGetStarted}
+              onPress={async () => {
+                // Mark welcome as seen
+                const { markWelcomeAsSeen } = require('../../utils/storage');
+                await markWelcomeAsSeen();
+
+                // Navigate to Login
+                navigation.navigate('Login');
+              }}
             >
               <Text style={styles.buttonText} numberOfLines={1}>
                 Get Started
