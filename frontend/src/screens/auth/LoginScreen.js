@@ -66,6 +66,7 @@ const LoginScreen = ({navigation, onLoginSuccess }) => {
 
       // Save token to AsyncStorage
       await storage.saveToken(response.token);
+      await storage.saveUser(response.user);
 
       // Show success message
       Alert.alert(

@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import AuthStack from './AuthStack';
 import MainStack from './MainStack';
 import SplashScreen from '../screens/onboarding/SplashScreen';
-import { getToken, removeToken } from '../utils/storage';
+import { getToken, removeToken, removeUser } from '../utils/storage';
 import authService from '../services/api/auth';
 
 const AppNavigator = () => {
@@ -61,6 +61,7 @@ const AppNavigator = () => {
   const handleLogout = async () => {
     console.log('🚪 Logout triggered...');
     await removeToken();
+    await removeUser();
     setIsAuthenticated(false);
   };
 

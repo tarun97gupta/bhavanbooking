@@ -5,9 +5,9 @@
 
 const colors = {
     // Primary colors
-    primary: '#2563EB',        // Blue - trust, professional
+    primary: '#0D34B7',        // Blue - trust, professional
     primaryDark: '#1E40AF',    // Darker blue for pressed states
-    primaryLight: '#60A5FA',   // Lighter blue for backgrounds
+    primaryLight: '#E8EEFB',   // Lighter blue for backgrounds (calendar range)
     
     // Splash screen color
     splashBlue: '#0D34B7',     // Deep blue for splash screen
