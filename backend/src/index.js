@@ -3,9 +3,6 @@ import 'dotenv/config';
 import authRoutes from './routes/authRoutes.js';
 import { connectDB } from './lib/db.js';
 import cors from 'cors';
-import job from './lib/job.js';
-import roomRoutes from './routes/roomRoutes.js';
-import bookingRoutes from './routes/bookingRoutes.js';
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -19,8 +16,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use("/api/auth", authRoutes);
-app.use("/api/rooms", roomRoutes);
-app.use("/api/bookings", bookingRoutes);
 
 app.listen(PORT, '0.0.0.0', ()=>{
     console.log(`Server is running on port ${PORT}`);
