@@ -22,15 +22,15 @@ const resourceSchema = new mongoose.Schema({
     },
     images: {
         type: [String],
-        required: true,
-        validate: [arrayMinLength, 'Resource must have at least one image']
+        // required: true,
+        // validate: [arrayMinLength, 'Resource must have at least one image']
     },
     // ==============Resource Classifications==============
     facilityType: {
         type: String,
         required: [true, 'Facility type is required'],
         enum: {
-            values: ['guest_room', 'function_hall', 'dining_hall', 'mini_hall', 'full_venue'],
+            values: ['guest_room', 'function_hall', 'dining_hall', 'mini_hall'],
             message: '{VALUE} is not a valid facility type'
         },
         index: true,
@@ -42,7 +42,7 @@ const resourceSchema = new mongoose.Schema({
         required: function () {
             return this.facilityType === 'guest_room';
         },
-        enum: ['Deluxe', 'Standard', 'Suite', 'Economy'],
+        enum: ['Deluxe', 'Standard'],
         // Only applicable for guest rooms
     },
     // ==================== PRICING ====================
@@ -75,6 +75,11 @@ const resourceSchema = new mongoose.Schema({
         default: false,
         // true = Only one booking at a time (Function Hall, Full Venue)
         // false = Multiple bookings allowed if units available (Guest Rooms)
+    },
+
+    canBookAlone:{
+        type: Boolean,
+        default: true,
     },
 
     minBookingDays: {

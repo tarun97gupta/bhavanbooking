@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-
 const bookingSchema = new mongoose.Schema({
     // ==================== REFERENCE IDs ====================
     bookingReferenceId: {
@@ -27,50 +26,21 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Category is required'],
         enum: [
-            'full_bhavan',
-            'function_dining',
-            'function_only',
-            'rooms_dining',
-            'rooms_only',
-            'mini_hall'
+            'full_venue',              // (i) Full Bhavan Booking
+            'function_hall_dining',    // (ii) Function Hall + Dining
+            'rooms_dining_mini_hall',  // (iii) All Rooms + Dining + Mini Hall
+            'rooms_mini_hall',         // (iv) All Rooms + Mini Hall
+            'function_hall_only',      // (v) Function Hall only
+            'mini_hall',               // (vi) Mini Hall only
+            'rooms_only'               // (vii) Individual rooms
         ],
         index: true,
         // Denormalized from Package for faster queries
     },
+
     // ==================== BOOKED RESOURCES ====================
-    // IMPORTANT: How resources array works for different packages:
-    //
-    // 1. rooms_only: 
-    //    User selects specific rooms (e.g., 2 Deluxe + 1 Standard)
-    //    resources = [
-    //      { facilityType: "guest_room", category: "Deluxe", quantity: 2, ... },
-    //      { facilityType: "guest_room", category: "Standard", quantity: 1, ... }
-    //    ]
-    //
-    // 2. rooms_dining:
-    //    ALL rooms + Dining Hall (automatically added by backend)
-    //    resources = [
-    //      { facilityType: "guest_room", category: "Deluxe", quantity: 10, ... },
-    //      { facilityType: "guest_room", category: "Standard", quantity: 5, ... },
-    //      { facilityType: "dining_hall", quantity: 1, ... }
-    //    ]
-    //
-    // 3. full_bhavan:
-    //    ALL resources (everything in the venue)
-    //    resources = [all rooms + all facilities]
-    //
-    // 4. function_dining:
-    //    resources = [
-    //      { facilityType: "function_hall", quantity: 1, ... },
-    //      { facilityType: "dining_hall", quantity: 1, ... }
-    //    ]
-    //
-    // 5. function_only:
-    //    resources = [{ facilityType: "function_hall", quantity: 1, ... }]
-    //
-    // 6. mini_hall:
-    //    resources = [{ facilityType: "mini_hall", quantity: 1, ... }]
-    //
+    // Stores which resources are included in this booking
+    // For availability checking and blocking
     resources: [{
         resource: {
             type: mongoose.Schema.Types.ObjectId,
@@ -79,7 +49,7 @@ const bookingSchema = new mongoose.Schema({
         },
         facilityType: {
             type: String,
-            enum: ['guest_room', 'function_hall', 'dining_hall', 'mini_hall', 'full_venue'],
+            enum: ['guest_room', 'function_hall', 'dining_hall', 'mini_hall'],
             required: true,
             // Denormalized for faster queries
         },
@@ -90,7 +60,7 @@ const bookingSchema = new mongoose.Schema({
         },
         category: {
             type: String,
-            // For guest rooms: "Deluxe", "Standard", etc.
+            // For guest rooms: "Deluxe", "Standard"
             // For others: null
         },
         quantity: {
@@ -98,25 +68,16 @@ const bookingSchema = new mongoose.Schema({
             required: true,
             min: 1,
             default: 1,
-            // Number of units booked (e.g., 3 Deluxe rooms, 1 Function Hall)
+            // Number of units booked
         },
-        pricePerUnit: {
+        capacity: {
             type: Number,
-            required: true,
-            // Price per unit per day (from Resource.basePrice)
-        },
-        days: {
-            type: Number,
-            required: true,
-            // Number of days/nights
-        },
-        subtotal: {
-            type: Number,
-            required: true,
-            // pricePerUnit × quantity × days
+            // Total capacity of this resource allocation
+            // e.g., 2 Deluxe rooms × 4 capacity = 8
         },
         _id: false
     }],
+
     // ==================== DATE INFORMATION ====================
     checkInDate: {
         type: Date,
@@ -168,29 +129,53 @@ const bookingSchema = new mongoose.Schema({
             type: String,
             trim: true
         },
+        idProofType: {
+            type: String,
+            // e.g., "Aadhaar", "Passport", "Driving License"
+        },
+        idProofNumber: {
+            type: String,
+            trim: true
+        }
     },
-    // ==================== CAPACITY INFORMATION ====================
-    // Only for rooms_only and rooms_dining packages
+
+    // ==================== ADDITIONAL INFO ====================
     numberOfGuests: {
         type: Number,
         min: 1,
-        // Required only for room bookings, calculated as: number of rooms × 4
+        // Optional - for reference only, not used in calculations
     },
 
-    calculatedCapacity: {
-        type: Number,
-        // Auto-calculated based on package:
-        // - For room packages: sum of all room capacities
-        // - For hall packages: hall capacity from Resource
+    specialRequests: {
+        type: String,
+        trim: true,
+        // Any special requests from guest
     },
 
-    // ==================== PRICING BREAKDOWN (SIMPLIFIED) ====================
+    // ==================== PRICING BREAKDOWN ====================
     pricing: {
-        // Total from all resources (before GST)
+        // Package base price (per day)
+        packageBasePrice: {
+            type: Number,
+            required: true,
+            // From Package.pricing.basePrice
+            // For rooms_only, this is 0
+        },
+
+        // For rooms_only: resource pricing breakdown
+        resourcePricing: {
+            type: Number,
+            default: 0,
+            // Sum of (resource.basePrice × quantity × days)
+            // Only used for rooms_only category
+        },
+
+        // Subtotal before GST
         subtotal: {
             type: Number,
             required: true,
-            // Sum of all resources[].subtotal
+            // For fixed packages: packageBasePrice × numberOfDays
+            // For rooms_only: resourcePricing
         },
 
         // GST calculation
@@ -208,8 +193,8 @@ const bookingSchema = new mongoose.Schema({
             }
         },
 
-        // Final total (subtotal + GST)
-        totalAmount: {
+        // Final amount (subtotal + GST)
+        finalAmount: {
             type: Number,
             required: true,
             // subtotal + gst.amount
@@ -225,9 +210,10 @@ const bookingSchema = new mongoose.Schema({
         balanceAmount: {
             type: Number,
             default: 0,
-            // totalAmount - paidAmount
+            // finalAmount - paidAmount
         }
     },
+
     // ==================== PAYMENT INFORMATION (RAZORPAY) ====================
     payment: {
         // Razorpay order ID (created before payment)
@@ -270,6 +256,7 @@ const bookingSchema = new mongoose.Schema({
             default: null
         }
     },
+
     // ==================== BOOKING STATUS ====================
     status: {
         type: String,
@@ -311,6 +298,13 @@ const bookingSchema = new mongoose.Schema({
         }
     },
 
+    // ==================== ADMIN NOTES ====================
+    adminNotes: {
+        type: String,
+        trim: true,
+        // Internal notes for admin use only
+    }
+
 }, { timestamps: true });
 
 // ==================== INDEXES ====================
@@ -332,20 +326,7 @@ bookingSchema.pre('save', async function (next) {
 
     // Auto-calculate balance amount
     if (this.pricing) {
-        this.pricing.balanceAmount = this.pricing.totalAmount - this.pricing.paidAmount;
-    }
-
-    next();
-});
-
-// Validation: Ensure numberOfGuests is provided for room packages
-bookingSchema.pre('save', function (next) {
-    const roomPackages = ['rooms_only', 'rooms_dining', 'full_bhavan'];
-
-    if (roomPackages.includes(this.category)) {
-        if (!this.numberOfGuests || this.numberOfGuests === 0) {
-            return next(new Error('numberOfGuests is required for room bookings'));
-        }
+        this.pricing.balanceAmount = this.pricing.finalAmount - this.pricing.paidAmount;
     }
 
     next();

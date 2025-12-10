@@ -2,7 +2,7 @@ import express from 'express';
 import Resource from '../models/Resource.js';
 import Booking from '../models/Booking.js';
 import mongoose from 'mongoose';
-import { protectRoute } from '../middleware/auth.middleware.js';
+import protectRoute  from '../middleware/auth.middleware.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 
@@ -59,13 +59,13 @@ router.get('/', protectRoute, async (req, res) => {
  * @route   GET /api/resources/facility/:facilityType
  * @desc    Get all resources of a specific facility type
  * @access  Public (authenticated users)
- * @params  facilityType - one of: guest_room, function_hall, dining_hall, mini_hall, full_venue
+ * @params  facilityType - one of: guest_room, function_hall, dining_hall, mini_hall
  */
 router.get('/facility/:facilityType', protectRoute, async (req, res) => {
     try {
         const { facilityType } = req.params;
 
-        const validTypes = ['guest_room', 'function_hall', 'dining_hall', 'mini_hall', 'full_venue'];
+        const validTypes = ['guest_room', 'function_hall', 'dining_hall', 'mini_hall'];
         if (!validTypes.includes(facilityType)) {
             return res.status(400).json({
                 success: false,
@@ -409,6 +409,7 @@ router.post('/', protectRoute, async (req, res) => {
             capacity,
             totalUnits,
             isExclusive,
+            canBookAlone,
             minBookingDays,
             maxBookingDays,
             advanceBookingDays,
@@ -425,7 +426,7 @@ router.post('/', protectRoute, async (req, res) => {
         }
 
         // Validate facility type
-        const validTypes = ['guest_room', 'function_hall', 'dining_hall', 'mini_hall', 'full_venue'];
+        const validTypes = ['guest_room', 'function_hall', 'dining_hall', 'mini_hall'];
         if (!validTypes.includes(facilityType)) {
             return res.status(400).json({
                 success: false,
@@ -471,6 +472,7 @@ router.post('/', protectRoute, async (req, res) => {
             capacity,
             totalUnits,
             isExclusive: isExclusive || false,
+            canBookAlone: canBookAlone !== undefined ? canBookAlone : true,
             minBookingDays: minBookingDays || 1,
             maxBookingDays: maxBookingDays || 7,
             advanceBookingDays: advanceBookingDays || 7,
@@ -541,6 +543,7 @@ router.put('/:id', protectRoute, async (req, res) => {
             'capacity',
             'totalUnits',
             'isExclusive',
+            'canBookAlone',
             'minBookingDays',
             'maxBookingDays',
             'advanceBookingDays',

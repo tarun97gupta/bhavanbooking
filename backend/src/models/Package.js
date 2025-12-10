@@ -1,36 +1,33 @@
 import mongoose from 'mongoose';
 
-
 const packageSchema = new mongoose.Schema({
+    // ==================== BASIC INFO ====================
     name: {
         type: String,
         required: [true, 'Package name is required'],
         unique: true,
         trim: true,
-        // Example: "Full Bhavan Booking"
     },
 
     slug: {
         type: String,
-        required: [true, 'Package slug is required'],
         unique: true,
         lowercase: true,
         trim: true,
-        // Example: "full-bhavan-booking" (for URLs)
     },
 
     category: {
         type: String,
         required: [true, 'Category is required'],
-        unique: true,
         enum: {
             values: [
-                'full_bhavan',
-                'function_dining',
-                'function_only',
-                'rooms_dining',
-                'rooms_only',
-                'mini_hall'
+                'full_venue',              // (i) Full Bhavan Booking
+                'function_hall_dining',    // (ii) Function Hall + Dining
+                'rooms_dining_mini_hall',  // (iii) All Rooms + Dining + Mini Hall
+                'rooms_mini_hall',         // (iv) All Rooms + Mini Hall
+                'function_hall_only',      // (v) Function Hall only
+                'mini_hall',               // (vi) Mini Hall only
+                'rooms_only'               // (vii) Individual room bookings
             ],
             message: '{VALUE} is not a valid category'
         },
@@ -40,75 +37,78 @@ const packageSchema = new mongoose.Schema({
     description: {
         type: String,
         required: [true, 'Description is required'],
-        // Detailed description for frontend
     },
 
     shortDescription: {
         type: String,
         trim: true,
-        // Brief tagline
-    },
-    icon: {
-        type: String,
-        // Icon name or emoji for frontend display
-        default: '🏨'
     },
 
     images: {
         type: [String],
         default: [],
-        // Package promotional images
     },
-    // ==================== RESOURCE INCLUSION RULES ====================
+
+    // ==================== RESOURCE INCLUSION ====================
     includes: {
-        // Required facility types (must be included)
-        requiredFacilities: {
-            type: [{
-                facilityType: {
-                    type: String,
-                    enum: ['guest_room', 'function_hall', 'dining_hall', 'mini_hall', 'full_venue'],
-                    required: true
-                },
-                quantity: {
-                    type: Number,
-                    default: 1,
-                    min: 1
-                },
-                isFixed: {
-                    type: Boolean,
-                    default: true,
-                    // true = user cannot change quantity
-                    // false = user can select quantity (for guest rooms)
-                }
-            }],
-            default: []
-        },
-        // NEW FIELD: Does user select rooms manually?
-        allowRoomSelection: {
+        resources: [{
+            resource: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Resource',
+                required: true
+            },
+            quantity: {
+                type: Number,
+                required: true,
+                min: 1,
+                default: 1
+            },
+            isRequired: {
+                type: Boolean,
+                default: true,
+            },
+            isFlexible: {
+                type: Boolean,
+                default: false,
+                // true only for "rooms_only" package
+            },
+            minQuantity: {
+                type: Number,
+                min: 1,
+            },
+            maxQuantity: {
+                type: Number,
+                min: 1,
+            }
+        }],
+
+        dining: {
             type: Boolean,
             default: false,
-            // true ONLY for "rooms_only" package
         },
-        includesAllRooms: {
+        breakfast: {
             type: Boolean,
             default: false,
-            // true for "rooms_dining", "full_bhavan"
         },
-        // Is this an exclusive booking? (blocks all other bookings)
-        isExclusiveBooking: {
+        lunch: {
             type: Boolean,
             default: false,
-            // true for Full Bhavan
+        },
+        dinner: {
+            type: Boolean,
+            default: false,
         }
     },
-    // ==================== PRICING CONFIGURATION ====================
+
+    // ==================== PRICING ====================
     pricing: {
-        // Fixed base price (before adding rooms/extras)
         basePrice: {
             type: Number,
             required: [true, 'Base price is required'],
             min: [0, 'Price cannot be negative'],
-            default: 0
+            default: 0,
+            // Fixed price per day
+            // For "rooms_only", this is 0
         },
 
         gstPercentage: {
@@ -116,105 +116,93 @@ const packageSchema = new mongoose.Schema({
             default: 18,
             min: 0,
             max: 100
-        },
+        }
     },
 
     // ==================== BOOKING RULES ====================
     bookingRules: {
-        // Minimum stay duration
         minDays: {
             type: Number,
             default: 1,
-            min: 1
+            min: 1,
         },
 
-        // Maximum stay duration
         maxDays: {
             type: Number,
+            default: 7,
+            min: 1,
+        },
+
+        advanceBookingDays: {
+            type: Number,
             default: 30,
-            min: 1
         },
 
-        // How far in advance can be booked?
-        maxAdvanceBookingDays: {
-            type: Number,
-            default: 7
-        },
-
-        // Minimum advance notice required
-        minAdvanceBookingDays: {
-            type: Number,
-            default: 1,
-            // 1 = can book for tomorrow
-            // 0 = can book for today
-        },
-
-        // Refund rules based on cancellation time
-        refundPolicy: {
+        cancellationPolicy: {
             type: String,
-            enum: ['full_refund', 'partial_refund', 'no_refund'],
-            default: 'partial_refund'
+            default: 'No refund within 7 days of check-in',
         }
     },
 
-    // ==================== FEATURES & HIGHLIGHTS ====================
-    features: {
+    // ==================== ADDITIONAL INFO ====================
+    termsAndConditions: {
         type: [String],
         default: [],
-        // Example: ["24/7 Support", "Free WiFi", "Parking Included"]
-    },
-    amenities: {
-        type: [String],
-        default: [],
-        // Inherited from included resources
     },
 
-    // ==================== TERMS & CONDITIONS ====================
-    terms: {
-        type: [String],
-        default: [],
-        // Package-specific terms
+    displayOrder: {
+        type: Number,
+        default: 0,
     },
+
+    bookingCount: {
+        type: Number,
+        default: 0,
+    },
+
     // ==================== METADATA ====================
     isActive: {
         type: Boolean,
         default: true,
-        index: true
-    },
+        index: true,
+    }
 }, { timestamps: true });
 
-// ==================== INDEXES ====================
-packageSchema.index({ category: 1 });
-packageSchema.index({ isActive: 1, displayOrder: 1 });
 
-// Validation: Ensure package configuration makes sense
-packageSchema.pre('save', function(next) {
-    // rooms_only: Should NOT have requiredFacilities
-    if (this.category === 'rooms_only') {
-        if (this.includes.requiredFacilities.length > 0) {
-            return next(new Error('rooms_only package should not have requiredFacilities'));
-        }
-        if (!this.includes.allowRoomSelection) {
-            return next(new Error('rooms_only package must have allowRoomSelection = true'));
-        }
-    }
-    
-    // rooms_dining, full_bhavan: Should include all rooms
-    if (['rooms_dining', 'full_bhavan'].includes(this.category)) {
-        if (!this.includes.includesAllRooms) {
-            return next(new Error(`${this.category} must have includesAllRooms = true`));
-        }
-    }
-    
-    next();
-});
+// ==================== INDEXES ====================
+packageSchema.index({ category: 1, isActive: 1 });
+packageSchema.index({ displayOrder: 1 });
+packageSchema.index({ bookingCount: -1 });
 
 // ==================== VIRTUAL FIELDS ====================
 packageSchema.virtual('url').get(function () {
     return `/packages/${this.slug}`;
 });
 
+// ==================== PRE-SAVE VALIDATION ====================
+packageSchema.pre('save', async function(next) {
+    try {
+        // Generate slug from name if not provided
+        if (!this.slug && this.name) {
+            this.slug = this.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
 
+        // Validate: rooms_only should have flexible resources
+        if (this.category === 'rooms_only') {
+            const hasFlexibleResource = this.includes.resources.some(r => r.isFlexible);
+            if (!hasFlexibleResource) {
+                return next(new Error('rooms_only package must have at least one flexible resource'));
+            }
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 
 const Package = mongoose.model('Package', packageSchema);
 export default Package;
