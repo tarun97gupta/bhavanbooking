@@ -6,9 +6,19 @@ import protectRoute from '../middleware/auth.middleware.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import customParseFormat from 'dayjs/plugin/customParseFormat.js';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
+import Booking from '../models/Booking.js';
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
-import Booking from '../models/Booking.js';
+dayjs.extend(customParseFormat);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+
+
+
 
 const router = express.Router();
 
