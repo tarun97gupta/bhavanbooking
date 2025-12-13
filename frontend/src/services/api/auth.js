@@ -1,9 +1,10 @@
 import Constants from 'expo-constants';
 import axios from 'axios';
-const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000/api';
+import { getToken } from '../../utils/storage';
+
+const API_URL =  'http://192.168.29.78:3000/api';
 
 console.log('API_URL:', API_URL);
-
 
 // Create axios instance with default config
 const api = axios.create({
@@ -14,8 +15,29 @@ const api = axios.create({
     timeout: 10000, // 10 second timeout
 });
 
+// ==================== TOKEN INTERCEPTOR ====================
+// Automatically adds JWT token to all requests
+api.interceptors.request.use(
+    async (config) => {
+        try {
+            const token = await getToken();
+            
+            if (token && !config.headers.Authorization) {
+                config.headers.Authorization = `Bearer ${token}`;
+                console.log('🔑 Token added to request');
+            }
+        } catch (error) {
+            console.error('Error getting token for request:', error);
+        }
+        
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
-// Add request interceptor for logging
+// ==================== REQUEST LOGGING INTERCEPTOR ====================
 api.interceptors.request.use(
     (config) => {
         console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url}`);
@@ -28,8 +50,7 @@ api.interceptors.request.use(
     }
 );
 
-
-// Add response interceptor for logging
+// ==================== RESPONSE LOGGING INTERCEPTOR ====================
 api.interceptors.response.use(
     (response) => {
         console.log(`✅ API Response: ${response.status} ${response.config.url}`);
@@ -42,15 +63,14 @@ api.interceptors.response.use(
     }
 );
 
-
+// ==================== AUTH SERVICE ====================
 const authService = {
     /**
-   * Login user with phone number and password
-   * @param {string} phoneNumber - User's phone number (10 digits)
-   * @param {string} password - User's password
-   * @returns {Promise<{token: string, user: object}>}
-   */
-
+     * Login user with phone number and password
+     * @param {string} phoneNumber - User's phone number
+     * @param {string} password - User's password
+     * @returns {Promise<{token: string, user: object}>}
+     */
     login: async (phoneNumber, password) => {
         try {
             const response = await api.post('/auth/login', {
@@ -66,7 +86,6 @@ const authService = {
         } catch (error) {
             console.error('Login error:', error);
 
-            // Handle different error types
             if (error.code === 'ECONNABORTED') {
                 throw new Error('Request timeout. Please try again.');
             }
@@ -75,18 +94,16 @@ const authService = {
                 throw new Error('Cannot connect to server. Please check your internet connection.');
             }
 
-            // Backend returned an error
             const errorMessage = error.response?.data?.message || 'Login failed';
             throw new Error(errorMessage);
         }
     },
 
     /**
-   * Verify JWT token with backend
-   * @param {string} token - JWT token
-   * @returns {Promise<{user: object}>}
-   */
-
+     * Verify JWT token with backend
+     * @param {string} token - JWT token
+     * @returns {Promise<{user: object}>}
+     */
     verifyToken: async (token) => {
         try {
             const response = await api.get('/auth/me', {
@@ -112,39 +129,36 @@ const authService = {
     },
 
     /**
- * Register new user
- * @param {object} userData - User registration data
- * @returns {Promise<{token: string, user: object}>}
- */
-
+     * Register new user
+     * @param {object} userData - User registration data
+     * @returns {Promise<{token: string, user: object}>}
+     */
     register: async (userData) => {
         try {
-          const response = await api.post('/auth/register', userData);
-    
-          return {
-            success: true,
-            token: response.data.token,
-            user: response.data.user,
-          };
+            const response = await api.post('/auth/register', userData);
+
+            return {
+                success: true,
+                token: response.data.token,
+                user: response.data.user,
+            };
         } catch (error) {
-          console.error('Registration error:', error);
-    
-          if (error.code === 'ECONNABORTED') {
-            throw new Error('Request timeout. Please try again.');
-          }
-    
-          if (error.message === 'Network Error' || !error.response) {
-            throw new Error('Cannot connect to server. Please check your internet connection.');
-          }
-    
-          const errorMessage = error.response?.data?.message || 'Registration failed';
-          throw new Error(errorMessage);
+            console.error('Registration error:', error);
+
+            if (error.code === 'ECONNABORTED') {
+                throw new Error('Request timeout. Please try again.');
+            }
+
+            if (error.message === 'Network Error' || !error.response) {
+                throw new Error('Cannot connect to server. Please check your internet connection.');
+            }
+
+            const errorMessage = error.response?.data?.message || 'Registration failed';
+            throw new Error(errorMessage);
         }
-      },
+    },
+};
 
-
-
-
-}
-
+// Export both the service and the api instance
+export { api };
 export default authService;

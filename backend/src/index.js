@@ -24,6 +24,24 @@ app.use("/api/resources", resourceRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/bookings", bookingRoutes);
 
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Global error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: 'Route not found'
+    });
+});
+
 app.listen(PORT, '0.0.0.0', ()=>{
     console.log(`Server is running on port ${PORT}`);
     console.log(`Local: http://localhost:${PORT}`);

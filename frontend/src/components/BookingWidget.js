@@ -8,27 +8,22 @@ import {
   ScrollView,
   Alert,
   Dimensions,
+  ActivityIndicator, // ✅ Add this
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import colors from '../styles/colors';
 import spacing from '../styles/spacing';
+import packageService from '../services/api/packages'; // ✅ Add this
 
 const { width } = Dimensions.get('window');
 
-// Booking categories for the hotel/bhavan
-const BOOKING_CATEGORIES = [
-  { id: '1', name: 'Full Bhavan Booking', icon: '🏢' },
-  { id: '2', name: 'Function Hall + Dining', icon: '🍽️' },
-  { id: '3', name: 'Function Hall Only', icon: '🎪' },
-  { id: '4', name: 'Rooms + Dining', icon: '🛏️' },
-  { id: '5', name: 'Rooms Only', icon: '🏨' },
-  { id: '6', name: 'Mini Hall (Meeting Room)', icon: '🏛️' },
-];
 
 const BookingWidget = ({ onCheckAvailability }) => {
   // State management
+  const [packages, setPackages] = useState([]); // ✅ Add this
+  const [loadingPackages, setLoadingPackages] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
@@ -44,6 +39,50 @@ const BookingWidget = ({ onCheckAvailability }) => {
       setNumberOfNights(nights);
     }
   }, [checkInDate, checkOutDate]);
+
+  // Fetch packages on component mount
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+
+  const fetchPackages = async () => {
+    try {
+      setLoadingPackages(true);
+      const result = await packageService.fetchPackages();
+
+      // Transform packages to match dropdown format
+      const formattedPackages = result.packages.map((pkg) => ({
+        id: pkg._id,
+        name: pkg.name,
+        category: pkg.category,
+        icon: getCategoryIcon(pkg.category),
+        basePrice: pkg.pricing.basePrice,
+        packageData: pkg // Store full package data
+      }));
+
+      setPackages(formattedPackages);
+      console.log('✅ Packages loaded:', formattedPackages.length);
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+      Alert.alert('Error', 'Failed to load booking categories. Please try again.');
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
+
+  // Helper to get icon based on category
+  const getCategoryIcon = (category) => {
+    const icons = {
+      full_venue: '🏢',
+      function_hall_dining: '🍽️',
+      function_hall_only: '🎪',
+      rooms_dining_mini_hall: '🛏️',
+      rooms_mini_hall: '🏨',
+      mini_hall: '🏛️',
+      rooms_only: '🛏️'
+    };
+    return icons[category] || '🏨';
+  };
 
   // Handle category selection
   const handleCategorySelect = (category) => {
@@ -97,7 +136,7 @@ const BookingWidget = ({ onCheckAvailability }) => {
 
     while (currentDate.isBefore(endDate) || currentDate.isSame(endDate)) {
       const dateString = currentDate.format('YYYY-MM-DD');
-      
+
       if (dateString === start) {
         range[dateString] = {
           startingDay: true,
@@ -116,7 +155,7 @@ const BookingWidget = ({ onCheckAvailability }) => {
           textColor: colors.text,
         };
       }
-      
+
       currentDate = currentDate.add(1, 'day');
     }
 
@@ -132,21 +171,16 @@ const BookingWidget = ({ onCheckAvailability }) => {
     }
   };
 
-  // Handle check availability button press
+  // Handle Check Availability
   const handleCheckAvailability = () => {
-    // Validate category
-    if (!selectedCategory) {
-      Alert.alert('Missing Information', 'Please select a booking category');
+    if (!selectedCategory || !checkInDate || !checkOutDate) {
+      Alert.alert('Incomplete Selection', 'Please select a category and dates.');
       return;
     }
 
-    // Validate dates
-    if (!checkInDate || !checkOutDate) {
-      Alert.alert('Missing Information', 'Please select check-in and check-out dates');
-      return;
-    }
+    console.log('🔍 Checking availability for:', selectedCategory.name);
 
-    // Pass data to parent component
+    // Call parent callback
     if (onCheckAvailability) {
       onCheckAvailability({
         category: selectedCategory,
@@ -167,86 +201,127 @@ const BookingWidget = ({ onCheckAvailability }) => {
 
   return (
     <View style={styles.container}>
+      {loadingPackages && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading packages...</Text>
+        </View>
+      )}
+      
       {/* Category Selector */}
       <View>
         <TouchableOpacity
-          style={styles.sectionButton}
+          style={[
+            styles.categorySelector,
+            showCategoryDropdown && styles.categorySelectorActive
+          ]}
           onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
           activeOpacity={0.7}
         >
-          <View style={styles.sectionContent}>
-            <Ionicons name="list" size={20} color={colors.textSecondary} style={styles.sectionIcon} />
-            <Text style={styles.sectionText}>
-              {selectedCategory ? selectedCategory.name : 'Select Categories'}
-            </Text>
+          <View style={styles.categoryLeft}>
+            <Ionicons 
+              name="list" 
+              size={20} 
+              color={colors.textSecondary} 
+              style={styles.categoryIcon} 
+            />
+            <View style={styles.categoryTextContainer}>
+              <Text style={selectedCategory ? styles.categoryValue : styles.categoryPlaceholder}>
+                {selectedCategory ? selectedCategory.name : 'Select Categories'}
+              </Text>
+            </View>
           </View>
-          <Ionicons 
-            name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color={colors.textSecondary} 
+          <Ionicons
+            name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.textSecondary}
           />
         </TouchableOpacity>
 
         {/* Inline Dropdown List */}
         {showCategoryDropdown && (
-          <View style={styles.dropdownList}>
-            {BOOKING_CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.dropdownItem,
-                  selectedCategory?.id === category.id && styles.dropdownItemSelected,
-                ]}
-                onPress={() => handleCategorySelect(category)}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name="home-outline" 
-                  size={18} 
-                  color={selectedCategory?.id === category.id ? colors.primary : colors.textSecondary} 
-                  style={styles.dropdownIcon}
-                />
-                <Text style={[
-                  styles.dropdownItemText,
-                  selectedCategory?.id === category.id && styles.dropdownItemTextSelected,
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.categoryDropdown}>
+            <ScrollView style={styles.categoryScrollView}>
+              {packages.map((category, index) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryOption,
+                    selectedCategory?.id === category.id && styles.categoryOptionSelected,
+                    index === packages.length - 1 && styles.categoryOptionLast
+                  ]}
+                  onPress={() => handleCategorySelect(category)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.categoryOptionIcon}>{category.icon}</Text>
+                  <View style={styles.categoryOptionTextContainer}>
+                    <Text style={[
+                      styles.categoryOptionName,
+                      selectedCategory?.id === category.id && styles.categoryOptionNameSelected,
+                    ]}>
+                      {category.name}
+                    </Text>
+                    {category.basePrice > 0 && (
+                      <Text style={styles.categoryOptionPrice}>
+                        ₹{category.basePrice.toLocaleString('en-IN')}/day
+                      </Text>
+                    )}
+                  </View>
+                  {selectedCategory?.id === category.id && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
       </View>
 
-      {/* Divider */}
-      <View style={styles.divider} />
-
       {/* Date Selector */}
       <TouchableOpacity
-        style={styles.sectionButton}
+        style={[
+          styles.dateSelector,
+          showDateModal && styles.dateSelectorActive
+        ]}
         onPress={() => setShowDateModal(true)}
         activeOpacity={0.7}
       >
-        <View style={styles.sectionContent}>
-          <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} style={styles.sectionIcon} />
-          <Text style={styles.sectionText}>
-            {checkInDate && checkOutDate
-              ? `${formatDate(checkInDate)} - ${formatDate(checkOutDate)}`
-              : 'Select Dates'}
-          </Text>
+        <View style={styles.dateLeft}>
+          <View style={styles.dateIconContainer}>
+            <Ionicons 
+              name="calendar-outline" 
+              size={20} 
+              color={colors.textSecondary} 
+            />
+          </View>
+          <View style={styles.dateTextContainer}>
+            <Text style={checkInDate && checkOutDate ? styles.dateValue : styles.datePlaceholder}>
+              {checkInDate && checkOutDate
+                ? `${formatDate(checkInDate)} - ${formatDate(checkOutDate)}`
+                : 'Select Dates'}
+            </Text>
+          </View>
         </View>
+        {checkInDate && checkOutDate && numberOfNights > 0 && (
+          <Text style={styles.nightsText}>{numberOfNights} night{numberOfNights > 1 ? 's' : ''}</Text>
+        )}
       </TouchableOpacity>
-
-      {/* Divider */}
-      <View style={styles.divider} />
 
       {/* Check Availability Button */}
       <TouchableOpacity
-        style={styles.checkButton}
+        style={[
+          styles.checkButton,
+          (!selectedCategory || !checkInDate || !checkOutDate) && styles.checkButtonDisabled,
+        ]}
         onPress={handleCheckAvailability}
-        activeOpacity={0.8}
+        disabled={!selectedCategory || !checkInDate || !checkOutDate}
       >
-        <Text style={styles.checkButtonText}>Check Availability</Text>
+        <Text style={[
+          styles.checkButtonText,
+          (!selectedCategory || !checkInDate || !checkOutDate) && styles.checkButtonTextDisabled
+        ]}>
+          Check Availability
+        </Text>
       </TouchableOpacity>
 
       {/* Date Selection Modal */}
@@ -288,17 +363,19 @@ const BookingWidget = ({ onCheckAvailability }) => {
             />
 
             {/* Confirm Button */}
-            <TouchableOpacity
-              style={[
-                styles.confirmButton,
-                (!checkInDate || !checkOutDate) && styles.confirmButtonDisabled,
-              ]}
-              onPress={handleConfirmDates}
-              disabled={!checkInDate || !checkOutDate}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.confirmButtonText}>Confirm Dates</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  (!checkInDate || !checkOutDate) && styles.checkButtonDisabled,
+                ]}
+                onPress={handleConfirmDates}
+                disabled={!checkInDate || !checkOutDate}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirm Dates</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -307,98 +384,203 @@ const BookingWidget = ({ onCheckAvailability }) => {
 };
 
 const styles = StyleSheet.create({
+  // Main Container
   container: {
     backgroundColor: colors.white,
     borderRadius: 12,
-    marginHorizontal: spacing.screenPaddingHorizontal,
-    overflow: 'hidden',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+
     // Shadow for iOS
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
+
     // Shadow for Android
-    elevation: 6,
+    elevation: 4,
   },
 
-  // Section Button (Category & Date)
-  sectionButton: {
+  // Loading Overlay
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    borderRadius: 12,
+  },
+  loadingText: {
+    marginTop: spacing.sm,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+
+  // ==================== SELECT CATEGORIES ====================
+
+  // Category Dropdown (Collapsed)
+  categorySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginBottom: spacing.sm,
   },
-  sectionContent: {
+  categorySelectorActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '05',
+  },
+  categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  sectionIcon: {
+  categoryIcon: {
     marginRight: spacing.sm,
   },
-  sectionText: {
-    fontSize: 15,
-    color: colors.text,
+  categoryTextContainer: {
     flex: 1,
   },
-
-  // Inline Dropdown
-  dropdownList: {
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: '#E8E8E8',
+  categoryLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 2,
   },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+  categoryValue: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.text,
   },
-  dropdownItemSelected: {
-    backgroundColor: '#F8F9FA',
+  categoryPlaceholder: {
+    fontSize: 15,
+    color: colors.textSecondary,
   },
   dropdownIcon: {
+    marginLeft: spacing.sm,
+  },
+
+  // Category Dropdown (Expanded - below selector)
+  categoryDropdown: {
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginBottom: spacing.sm,
+    maxHeight: 250,
+    overflow: 'hidden',
+
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+
+    // Shadow for Android
+    elevation: 2,
+  },
+  categoryScrollView: {
+    maxHeight: 250,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  categoryOptionLast: {
+    borderBottomWidth: 0,
+  },
+  categoryOptionSelected: {
+    backgroundColor: colors.primary + '08',
+  },
+  categoryOptionIcon: {
+    fontSize: 20,
     marginRight: spacing.sm,
   },
-  dropdownItemText: {
-    fontSize: 14,
-    color: colors.text,
+  categoryOptionTextContainer: {
     flex: 1,
   },
-  dropdownItemTextSelected: {
+  categoryOptionName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  categoryOptionNameSelected: {
     color: colors.primary,
     fontWeight: '600',
   },
-
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: '#E8E8E8',
+  categoryOptionPrice: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  selectedCheck: {
+    marginLeft: spacing.sm,
   },
 
-  // Check Availability Button
-  checkButton: {
-    backgroundColor: '#FDB813',
-    paddingVertical: spacing.md + 2,
+  // ==================== DATE SELECTION ====================
+
+  // Date Selector
+  dateSelector: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    margin: spacing.md,
-    borderRadius: spacing.radiusMd,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginBottom: spacing.md,
   },
-  checkButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  dateSelectorActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '05',
+  },
+  dateLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateIconContainer: {
+    marginRight: spacing.sm,
+  },
+  dateTextContainer: {
+    flex: 1,
+  },
+  dateValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  datePlaceholder: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  nightsText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
 
-  // Modal Overlay
+  // Date Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -408,8 +590,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '75%',
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xl,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -418,30 +600,101 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    borderBottomColor: '#F0F0F0',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.text,
   },
+  modalCloseButton: {
+    padding: spacing.sm,
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalBody: {
+    padding: spacing.lg,
+  },
 
-  // Confirm Button
-  confirmButton: {
-    backgroundColor: colors.primary,
-    margin: spacing.lg,
+  // Calendar
+  calendarContainer: {
+    marginBottom: spacing.lg,
+  },
+
+  // Modal Buttons
+  modalButtonContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modalCancelButton: {
+    flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: spacing.radiusMd,
+    borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
-  confirmButtonDisabled: {
-    backgroundColor: colors.textSecondary,
-    opacity: 0.5,
-  },
-  confirmButtonText: {
-    color: colors.white,
+  modalCancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.text,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  modalConfirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+
+  // ==================== CHECK AVAILABILITY BUTTON ====================
+
+  checkButton: {
+    backgroundColor: '#FFD93D', // Yellow color from screenshot
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
+    alignItems: 'center',
+
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+
+    // Shadow for Android
+    elevation: 3,
+  },
+  checkButtonDisabled: {
+    backgroundColor: '#E8E8E8',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  checkButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  checkButtonTextDisabled: {
+    color: '#999999',
+  },
+
+  // ==================== DIVIDER ====================
+
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: spacing.sm,
   },
 });
 

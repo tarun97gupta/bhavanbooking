@@ -17,6 +17,9 @@ const colors = {
     secondaryDark: '#D97706',
     secondaryLight: '#FCD34D',
     
+    // Accent color
+    accent: '#FFD93D',         // Yellow - Call-to-action buttons
+    
     // Neutrals
     background: '#F9FAFB',     // White background
     surface: '#F9FAFB',        // Light gray surface
