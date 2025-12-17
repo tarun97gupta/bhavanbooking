@@ -10,14 +10,18 @@ import {
     Alert,
     Dimensions,
     FlatList,
+    Modal,
+    TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Calendar } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import colors from '../../styles/colors';
 import spacing from '../../styles/spacing';
 import packageService from '../../services/api/packages';
 import bookingService from '../../services/api/bookings';
+import BookingDetailScreen from '../main/BookingDetailScreen';
 
 
 const { width } = Dimensions.get('window');
@@ -27,6 +31,7 @@ const IMAGE_HEIGHT = 200;
 
 const PackageDetailScreen = ({ route, navigation }) => {
     const { packageId, checkInDate, checkOutDate, numberOfNights } = route.params;
+    const initialRoomQuantity = route.params.roomQuantity || 1; // ✅ Get from route params
     const insets = useSafeAreaInsets();
 
     const [packageData, setPackageData] = useState(null);
@@ -34,14 +39,35 @@ const PackageDetailScreen = ({ route, navigation }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [availability, setAvailability] = useState(null);
     const [checkingAvailability, setCheckingAvailability] = useState(false);
+    const [roomQuantity, setRoomQuantity] = useState(initialRoomQuantity); // ✅ Initialize with param
+    const [showEditModal, setShowEditModal] = useState(false); // ✅ Add edit modal state
+    
+    // Edit modal states
+    const [editCheckInDate, setEditCheckInDate] = useState(null);
+    const [editCheckOutDate, setEditCheckOutDate] = useState(null);
+    const [editRoomQuantity, setEditRoomQuantity] = useState(initialRoomQuantity);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [markedDates, setMarkedDates] = useState({});
+    
     const flatListRef = useRef(null);
 
     useEffect(() => {
         loadPackageDetails();
-        if (checkInDate && checkOutDate) {
+    }, [packageId]);
+
+    // Check availability after package data is loaded
+    useEffect(() => {
+        if (packageData && checkInDate && checkOutDate) {
             checkPackageAvailability();
         }
-    }, [packageId]);
+    }, [packageData]);
+
+    // Re-check availability when room quantity changes (for rooms_only)
+    useEffect(() => {
+        if (packageData?.category === 'rooms_only' && checkInDate && checkOutDate) {
+            checkPackageAvailability();
+        }
+    }, [roomQuantity]);
 
     const loadPackageDetails = async () => {
         try {
@@ -63,10 +89,24 @@ const PackageDetailScreen = ({ route, navigation }) => {
 
         try {
             setCheckingAvailability(true);
+            
+            // Check if package is rooms_only and pass roomQuantity
+            const isRoomsOnly = packageData?.category === 'rooms_only';
+            
+            console.log('🔍 Checking availability:', {
+                packageId,
+                checkInDate: formatDateForAPI(checkInDate),
+                checkOutDate: formatDateForAPI(checkOutDate),
+                isRoomsOnly,
+                roomQuantity,
+                willPassToAPI: isRoomsOnly ? roomQuantity : null
+            });
+            
             const result = await bookingService.checkAvailability(
                 packageId,
                 formatDateForAPI(checkInDate),
-                formatDateForAPI(checkOutDate)
+                formatDateForAPI(checkOutDate),
+                isRoomsOnly ? roomQuantity : null
             );
             setAvailability(result.data);
             console.log('✅ Availability checked:', result.available);
@@ -120,14 +160,18 @@ const PackageDetailScreen = ({ route, navigation }) => {
             return;
         }
 
-        // Navigate to booking form
-        navigation.navigate('BookingForm', {
+        // Check if package is rooms_only
+        const isRoomsOnly = packageData?.category === 'rooms_only';
+
+        // Navigate to booking details screen ✅ Updated
+        navigation.navigate('BookingDetails', {
             packageId: packageData._id,
             packageName: packageData.name,
             checkInDate: formatDateForAPI(checkInDate),
             checkOutDate: formatDateForAPI(checkOutDate),
             numberOfNights: numberOfNights || calculateNights(),
             pricing: availability?.pricing || packageData.pricing,
+            roomQuantity: isRoomsOnly ? roomQuantity : null, // ✅ Pass roomQuantity for rooms_only
         });
     };
 
@@ -148,6 +192,113 @@ const PackageDetailScreen = ({ route, navigation }) => {
             return Math.round(base + gst);
         }
         return packageData?.pricing?.basePrice || 0;
+    };
+
+    // Handle opening edit modal
+    const handleOpenEditModal = () => {
+        // Initialize edit states with current values
+        setEditCheckInDate(checkInDate);
+        setEditCheckOutDate(checkOutDate);
+        setEditRoomQuantity(roomQuantity);
+        
+        // Initialize marked dates if dates exist
+        if (checkInDate && checkOutDate) {
+            const range = getDateRange(checkInDate, checkOutDate);
+            setMarkedDates(range);
+        }
+        
+        setShowEditModal(true);
+    };
+
+    // Handle date selection in edit modal
+    const handleDayPress = (day) => {
+        const selectedDate = day.dateString;
+
+        if (!editCheckInDate || (editCheckInDate && editCheckOutDate)) {
+            // First selection or reset
+            setEditCheckInDate(selectedDate);
+            setEditCheckOutDate(null);
+            setMarkedDates({
+                [selectedDate]: {
+                    startingDay: true,
+                    color: colors.primary,
+                    textColor: colors.white,
+                },
+            });
+        } else if (editCheckInDate && !editCheckOutDate) {
+            // Second selection
+            if (dayjs(selectedDate).isBefore(dayjs(editCheckInDate))) {
+                // Reset if selected date is before check-in
+                setEditCheckInDate(selectedDate);
+                setEditCheckOutDate(null);
+                setMarkedDates({
+                    [selectedDate]: {
+                        startingDay: true,
+                        color: colors.primary,
+                        textColor: colors.white,
+                    },
+                });
+            } else {
+                // Valid check-out date
+                setEditCheckOutDate(selectedDate);
+                const range = getDateRange(editCheckInDate, selectedDate);
+                setMarkedDates(range);
+            }
+        }
+    };
+
+    // Get date range for marking calendar
+    const getDateRange = (start, end) => {
+        const range = {};
+        let currentDate = dayjs(start);
+        const endDate = dayjs(end);
+
+        while (currentDate.isBefore(endDate) || currentDate.isSame(endDate)) {
+            const dateString = currentDate.format('YYYY-MM-DD');
+
+            if (dateString === dayjs(start).format('YYYY-MM-DD')) {
+                range[dateString] = {
+                    startingDay: true,
+                    color: colors.primary,
+                    textColor: colors.white,
+                };
+            } else if (dateString === dayjs(end).format('YYYY-MM-DD')) {
+                range[dateString] = {
+                    endingDay: true,
+                    color: colors.primary,
+                    textColor: colors.white,
+                };
+            } else {
+                range[dateString] = {
+                    color: colors.primaryLight || '#E8EEFB',
+                    textColor: colors.text,
+                };
+            }
+
+            currentDate = currentDate.add(1, 'day');
+        }
+
+        return range;
+    };
+
+    // Apply changes from edit modal
+    const handleApplyChanges = () => {
+        if (!editCheckInDate || !editCheckOutDate) {
+            Alert.alert('Incomplete Selection', 'Please select both check-in and check-out dates');
+            return;
+        }
+
+        // Update the main state with edited values
+        // Since we can't directly update route params, we'll navigate back with new params
+        navigation.replace('PackageDetail', {
+            packageId: packageData._id,
+            checkInDate: editCheckInDate,
+            checkOutDate: editCheckOutDate,
+            numberOfNights: dayjs(editCheckOutDate).diff(dayjs(editCheckInDate), 'day'),
+            roomQuantity: packageData.category === 'rooms_only' ? editRoomQuantity : null,
+        });
+        
+        setShowEditModal(false);
     };
 
     const images = (packageData?.images && packageData.images.length) > 0
@@ -187,14 +338,24 @@ const PackageDetailScreen = ({ route, navigation }) => {
                 >
                     <Ionicons name="arrow-back" size={24} color={colors.white} />
                 </TouchableOpacity>
-                <View style={styles.headerCenter}>
+                <TouchableOpacity 
+                    style={styles.headerCenter}
+                    onPress={handleOpenEditModal}
+                    activeOpacity={0.7}
+                >
                     <Text style={styles.headerTitle}>{packageData.name.replace(' Booking', '').replace(' Package', '')}</Text>
                     {checkInDate && checkOutDate && (
-                        <Text style={styles.headerSubtitle}>
-                            {formatDateDisplay(checkInDate)} - {formatDateDisplay(checkOutDate)}
-                        </Text>
+                        <View style={styles.headerSubtitleRow}>
+                            <Text style={styles.headerSubtitle}>
+                                {formatDateDisplay(checkInDate)} - {formatDateDisplay(checkOutDate)}
+                            </Text>
+                            {packageData.category === 'rooms_only' && (
+                                <Text style={styles.headerSubtitle}> • {roomQuantity} Room{roomQuantity > 1 ? 's' : ''}</Text>
+                            )}
+                        </View>
                     )}
-                </View>
+                    <Ionicons name="pencil" size={14} color={colors.white} style={{ marginTop: 2 }} />
+                </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.headerButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -396,6 +557,145 @@ const PackageDetailScreen = ({ route, navigation }) => {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Edit Modal */}
+            <Modal
+                visible={showEditModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowEditModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.editModalContent}>
+                        <View style={styles.editModalHeader}>
+                            <Text style={styles.editModalTitle}>Edit Booking Details</Text>
+                            <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                                <Ionicons name="close" size={24} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.editModalBody} showsVerticalScrollIndicator={false}>
+                            {/* Category Display (Read-only) */}
+                            <View style={styles.editSection}>
+                                <Text style={styles.editLabel}>Package</Text>
+                                <View style={styles.editReadOnly}>
+                                    <Text style={styles.editValue}>
+                                        {packageData?.name}
+                                    </Text>
+                                    <Text style={styles.editHint}>Go back to home to change package</Text>
+                                </View>
+                            </View>
+
+                            {/* Dates Selector (Editable) */}
+                            <View style={styles.editSection}>
+                                <Text style={styles.editLabel}>Select Dates</Text>
+                                <TouchableOpacity
+                                    style={styles.dateButton}
+                                    onPress={() => setShowDatePicker(!showDatePicker)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                                    <Text style={styles.dateButtonText}>
+                                        {editCheckInDate && editCheckOutDate
+                                            ? `${formatDateDisplay(editCheckInDate)} - ${formatDateDisplay(editCheckOutDate)}`
+                                            : 'Tap to select dates'}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                                </TouchableOpacity>
+
+                                {/* Calendar */}
+                                {showDatePicker && (
+                                    <View style={styles.calendarContainer}>
+                                        <Calendar
+                                            minDate={dayjs().format('YYYY-MM-DD')}
+                                            onDayPress={handleDayPress}
+                                            markingType={'period'}
+                                            markedDates={markedDates}
+                                            theme={{
+                                                selectedDayBackgroundColor: colors.primary,
+                                                todayTextColor: colors.primary,
+                                                arrowColor: colors.primary,
+                                            }}
+                                        />
+                                        {editCheckInDate && editCheckOutDate && (
+                                            <Text style={styles.nightsInfo}>
+                                                {dayjs(editCheckOutDate).diff(dayjs(editCheckInDate), 'day')} night(s) selected
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Room Quantity (Editable for rooms_only) */}
+                            {packageData?.category === 'rooms_only' && (
+                                <View style={styles.editSection}>
+                                    <Text style={styles.editLabel}>Number of Rooms</Text>
+                                    <View style={styles.roomQuantityControls}>
+                                        <TouchableOpacity
+                                            style={[styles.quantityButton, editRoomQuantity === 1 && styles.quantityButtonDisabled]}
+                                            onPress={() => setEditRoomQuantity(Math.max(1, editRoomQuantity - 1))}
+                                            disabled={editRoomQuantity === 1}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons name="remove" size={24} color={editRoomQuantity === 1 ? colors.textSecondary : colors.primary} />
+                                        </TouchableOpacity>
+                                        
+                                        <View style={styles.quantityDisplay}>
+                                            <Text style={styles.quantityNumber}>{editRoomQuantity}</Text>
+                                            <Text style={styles.quantityLabel}>{editRoomQuantity === 1 ? 'Room' : 'Rooms'}</Text>
+                                        </View>
+                                        
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.quantityButton,
+                                                packageData.includes?.resources?.[0]?.resource?.totalUnits &&
+                                                editRoomQuantity >= packageData.includes.resources[0].resource.totalUnits &&
+                                                styles.quantityButtonDisabled
+                                            ]}
+                                            onPress={() => {
+                                                const maxRooms = packageData.includes?.resources?.[0]?.resource?.totalUnits || 10;
+                                                if (editRoomQuantity < maxRooms) {
+                                                    setEditRoomQuantity(editRoomQuantity + 1);
+                                                } else {
+                                                    Alert.alert('Maximum Reached', `Only ${maxRooms} rooms available`);
+                                                }
+                                            }}
+                                            disabled={packageData.includes?.resources?.[0]?.resource?.totalUnits && editRoomQuantity >= packageData.includes.resources[0].resource.totalUnits}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons
+                                                name="add"
+                                                size={24}
+                                                color={
+                                                    packageData.includes?.resources?.[0]?.resource?.totalUnits &&
+                                                    editRoomQuantity >= packageData.includes.resources[0].resource.totalUnits
+                                                        ? colors.textSecondary
+                                                        : colors.primary
+                                                }
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <Text style={styles.quantityHint}>
+                                        {packageData.includes?.resources?.[0]?.resource?.totalUnits
+                                            ? `Maximum ${packageData.includes.resources[0].resource.totalUnits} rooms available`
+                                            : 'Select the number of rooms you need'}
+                                    </Text>
+                                </View>
+                            )}
+                        </ScrollView>
+
+                        <View style={styles.editModalFooter}>
+                            <TouchableOpacity
+                                style={styles.editModalButton}
+                                onPress={handleApplyChanges}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.editModalButtonText}>Apply Changes</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -475,6 +775,122 @@ const styles = StyleSheet.create({
         color: colors.white,
         opacity: 0.9,
         marginTop: 2,
+    },
+    headerSubtitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
+    // Edit Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    editModalContent: {
+        backgroundColor: colors.white,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '80%',
+    },
+    editModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    editModalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    editModalBody: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+    },
+    editSection: {
+        marginBottom: spacing.lg,
+    },
+    editLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    editReadOnly: {
+        backgroundColor: '#F9FAFB',
+        padding: spacing.md,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    editValue: {
+        fontSize: 15,
+        color: colors.text,
+        marginBottom: 4,
+    },
+    editHint: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        fontStyle: 'italic',
+    },
+    editModalFooter: {
+        padding: spacing.lg,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    editModalButton: {
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.md,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    editModalButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.white,
+    },
+    dateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.white,
+        padding: spacing.md,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.primary,
+    },
+    dateButtonText: {
+        flex: 1,
+        fontSize: 15,
+        color: colors.text,
+        marginLeft: spacing.sm,
+    },
+    calendarContainer: {
+        marginTop: spacing.md,
+        borderRadius: 8,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    nightsInfo: {
+        textAlign: 'center',
+        padding: spacing.sm,
+        fontSize: 13,
+        color: colors.primary,
+        fontWeight: '600',
+        backgroundColor: colors.primaryLight,
+    },
+    roomQuantityControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: spacing.md,
     },
 
     // Scroll View
@@ -569,6 +985,59 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: colors.text,
         marginBottom: spacing.md,
+    },
+
+    // Room Quantity Selector
+    roomQuantityContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: spacing.md,
+        marginBottom: spacing.sm,
+    },
+    quantityButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.white,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.primary,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    quantityButtonDisabled: {
+        borderColor: '#D1D5DB',
+        backgroundColor: '#F0F0F0',
+    },
+    quantityDisplay: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: spacing.xl,
+        minWidth: 80,
+    },
+    quantityNumber: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: colors.primary,
+        marginBottom: 4,
+    },
+    quantityLabel: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        fontWeight: '500',
+    },
+    quantityHint: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginTop: spacing.xs,
     },
 
     // Amenities Grid

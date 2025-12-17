@@ -145,5 +145,71 @@ router.get('/me', protectRoute, async (req, res) => {
     }
 });
 
+// PUT /api/auth/update-profile - Update user profile
+router.put('/update-profile', protectRoute, async (req, res) => {
+    try {
+        const { fullName, email, phoneNumber } = req.body;
+        
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Update fields if provided
+        if (fullName !== undefined) {
+            if (fullName.length < 3) {
+                return res.status(400).json({ message: "Full name must be at least 3 characters long" });
+            }
+            user.fullName = fullName;
+        }
+        
+        if (email !== undefined && email !== user.email) {
+            // Check if email is already taken by another user
+            if (email && email.length > 0) {
+                const existingEmail = await User.findOne({ email, _id: { $ne: user._id } });
+                if (existingEmail) {
+                    return res.status(400).json({ message: "Email already exists" });
+                }
+            }
+            user.email = email || null;
+        }
+        
+        if (phoneNumber !== undefined && phoneNumber !== user.phoneNumber) {
+            // Validate phone number format
+            const phoneRegex = /^[0-9]{10}$/;
+            if (!phoneRegex.test(phoneNumber)) {
+                return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+            }
+            
+            // Check if phone number is already taken
+            const existingPhone = await User.findOne({ phoneNumber, _id: { $ne: user._id } });
+            if (existingPhone) {
+                return res.status(400).json({ message: "Phone number already exists" });
+            }
+            user.phoneNumber = phoneNumber;
+        }
+        
+        await user.save();
+        
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user: {
+                id: user._id,
+                fullName: user.fullName,
+                email: user.email || null,
+                phoneNumber: user.phoneNumber,
+                role: user.role,
+                createdAt: user.createdAt
+            }
+        });
+        
+    } catch (error) {
+        console.log(error, 'Error in Update Profile');
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 
 export default router;

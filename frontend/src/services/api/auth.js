@@ -157,6 +157,32 @@ const authService = {
             throw new Error(errorMessage);
         }
     },
+
+    /**
+     * Update user profile
+     * @param {object} profileData - Profile data to update
+     * @returns {Promise<{user: object}>}
+     */
+    updateProfile: async (profileData) => {
+        try {
+            const response = await api.put('/auth/update-profile', profileData);
+
+            return {
+                success: true,
+                user: response.data.user,
+                message: response.data.message,
+            };
+        } catch (error) {
+            console.error('Update profile error:', error);
+
+            if (error.message === 'Network Error' || !error.response) {
+                throw new Error('Cannot connect to server.');
+            }
+
+            const errorMessage = error.response?.data?.message || 'Failed to update profile';
+            throw new Error(errorMessage);
+        }
+    },
 };
 
 // Export both the service and the api instance

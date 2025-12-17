@@ -28,6 +28,7 @@ const BookingWidget = ({ onCheckAvailability }) => {
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
   const [numberOfNights, setNumberOfNights] = useState(0);
+  const [roomQuantity, setRoomQuantity] = useState(1); // ✅ Add room quantity state
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
   const [markedDates, setMarkedDates] = useState({});
@@ -88,6 +89,8 @@ const BookingWidget = ({ onCheckAvailability }) => {
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
     setShowCategoryDropdown(false);
+    // Reset room quantity when changing category
+    setRoomQuantity(1);
   };
 
   // Handle date selection in calendar
@@ -178,6 +181,12 @@ const BookingWidget = ({ onCheckAvailability }) => {
       return;
     }
 
+    // ✅ Validate room quantity for rooms_only packages
+    if (selectedCategory.category === 'rooms_only' && (!roomQuantity || roomQuantity < 1)) {
+      Alert.alert('Room Quantity Required', 'Please select the number of rooms.');
+      return;
+    }
+
     console.log('🔍 Checking availability for:', selectedCategory.name);
 
     // Call parent callback
@@ -187,9 +196,13 @@ const BookingWidget = ({ onCheckAvailability }) => {
         checkInDate: checkInDate,
         checkOutDate: checkOutDate,
         numberOfNights: numberOfNights,
+        roomQuantity: selectedCategory.category === 'rooms_only' ? roomQuantity : null, // ✅ Add roomQuantity
       });
     }
   };
+  
+  // Check if selected category is rooms_only
+  const isRoomsOnly = selectedCategory?.category === 'rooms_only';
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -306,6 +319,34 @@ const BookingWidget = ({ onCheckAvailability }) => {
           <Text style={styles.nightsText}>{numberOfNights} night{numberOfNights > 1 ? 's' : ''}</Text>
         )}
       </TouchableOpacity>
+
+      {/* Room Quantity Selector - Only for rooms_only */}
+      {isRoomsOnly && (
+        <View style={styles.roomQuantityContainer}>
+          <View style={styles.roomQuantityLeft}>
+            <Ionicons name="bed-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.roomQuantityLabel}>Number of Rooms</Text>
+          </View>
+          <View style={styles.roomQuantityControls}>
+            <TouchableOpacity
+              style={[styles.quantityBtn, roomQuantity === 1 && styles.quantityBtnDisabled]}
+              onPress={() => setRoomQuantity(Math.max(1, roomQuantity - 1))}
+              disabled={roomQuantity === 1}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="remove" size={18} color={roomQuantity === 1 ? colors.textSecondary : colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.roomQuantityValue}>{roomQuantity}</Text>
+            <TouchableOpacity
+              style={styles.quantityBtn}
+              onPress={() => setRoomQuantity(roomQuantity + 1)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Check Availability Button */}
       <TouchableOpacity
@@ -652,6 +693,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+
+  // ==================== ROOM QUANTITY SELECTOR ====================
+  roomQuantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  roomQuantityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  roomQuantityLabel: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  roomQuantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  quantityBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityBtnDisabled: {
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F5F5F5',
+  },
+  roomQuantityValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
+    minWidth: 30,
+    textAlign: 'center',
   },
 
   // ==================== CHECK AVAILABILITY BUTTON ====================

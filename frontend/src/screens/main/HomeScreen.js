@@ -111,12 +111,25 @@ const HomeScreen = ({ navigation }) => {
     if (bookingData.category?.id) {
       console.log('→ Navigating to PackageDetail:', bookingData.category.name);
       
-      navigation.navigate('PackageDetail', {
+      const navParams = {
         packageId: bookingData.category.id,
         checkInDate: bookingData.checkInDate,
         checkOutDate: bookingData.checkOutDate,
         numberOfNights: bookingData.numberOfNights
-      });
+      };
+      
+      // ✅ Add roomQuantity if present (for rooms_only packages)
+      if (bookingData.roomQuantity) {
+        navParams.roomQuantity = bookingData.roomQuantity;
+        console.log('✅ Room quantity added:', bookingData.roomQuantity);
+      }
+      
+      // ✅ Add roomQuantity if it's a rooms_only package
+      if (bookingData.roomQuantity) {
+        navParams.roomQuantity = bookingData.roomQuantity;
+      }
+      
+      navigation.navigate('PackageDetail', navParams);
     } else {
       Alert.alert('Selection Required', 'Please select a package category first.');
     }
@@ -130,10 +143,17 @@ const HomeScreen = ({ navigation }) => {
     const pkg = packages.find(p => p.category === scenario.category);
     
     if (pkg) {
-      navigation.navigate('PackageDetail', { 
+      const navParams = { 
         packageId: pkg._id,
         ...(selectedDates && { ...selectedDates })
-      });
+      };
+      
+      // ✅ Add default roomQuantity for rooms_only packages
+      if (pkg.category === 'rooms_only') {
+        navParams.roomQuantity = 1;
+      }
+      
+      navigation.navigate('PackageDetail', navParams);
     } else {
       Alert.alert('Coming Soon', `${scenario.title} will be available soon!`);
     }
@@ -142,10 +162,18 @@ const HomeScreen = ({ navigation }) => {
   // Handle Service/Package Press
   const handlePackagePress = (pkg) => {
     console.log('Package selected:', pkg.name);
-    navigation.navigate('PackageDetail', { 
+    
+    const navParams = { 
       packageId: pkg._id,
       ...(selectedDates && { ...selectedDates })
-    });
+    };
+    
+    // ✅ Add default roomQuantity for rooms_only packages
+    if (pkg.category === 'rooms_only') {
+      navParams.roomQuantity = 1;
+    }
+    
+    navigation.navigate('PackageDetail', navParams);
   };
 
   // Get category color

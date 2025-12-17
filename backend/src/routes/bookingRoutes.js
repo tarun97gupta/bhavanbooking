@@ -608,7 +608,12 @@ router.post('/verify-payment', protectRoute, async (req, res) => {
                 status: booking.status,
                 checkInDate: dayjs(booking.checkInDate).format('DD-MM-YYYY'),
                 checkOutDate: dayjs(booking.checkOutDate).format('DD-MM-YYYY'),
-                totalAmount: booking.pricing.finalAmount
+                finalAmount: booking.pricing.finalAmount,
+                guestDetails: {
+                    fullName: booking.guestDetails.fullName,
+                    phoneNumber: booking.guestDetails.phoneNumber,
+                    email: booking.guestDetails.email
+                }
             }
         });
 
@@ -702,9 +707,14 @@ router.get('/:bookingId', protectRoute, async (req, res) => {
             });
         }
         
+        // Format dates for frontend consistency
+        const bookingObj = booking.toObject();
+        bookingObj.checkInDate = dayjs(bookingObj.checkInDate).format('DD-MM-YYYY');
+        bookingObj.checkOutDate = dayjs(bookingObj.checkOutDate).format('DD-MM-YYYY');
+        
         return res.status(200).json({
             success: true,
-            data: booking,
+            data: bookingObj,
             message: 'Booking fetched successfully'
         });
         
