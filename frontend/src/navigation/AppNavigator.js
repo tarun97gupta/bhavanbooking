@@ -59,10 +59,16 @@ const AppNavigator = () => {
 
   // This function will be called when user logs out
   const handleLogout = async () => {
-    console.log('🚪 Logout triggered...');
-    await removeToken();
-    await removeUser();
-    setIsAuthenticated(false);
+    try {
+      console.log('🚪 Logout triggered...');
+      await removeToken();
+      await removeUser();
+      console.log('✅ Token and user data removed');
+      setIsAuthenticated(false);
+      console.log('✅ isAuthenticated set to false');
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+    }
   };
 
   // Handle splash screen finish
@@ -75,8 +81,11 @@ const AppNavigator = () => {
     return <SplashScreen onFinish={handleSplashFinish} />;
   }
 
+  // Log the current authentication state
+  console.log('🔐 AppNavigator render - isAuthenticated:', isAuthenticated);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
       {isAuthenticated ? (
         <MainStack onLogout={handleLogout} />
       ) : (

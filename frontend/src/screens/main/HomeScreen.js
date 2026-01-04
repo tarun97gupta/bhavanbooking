@@ -139,13 +139,23 @@ const HomeScreen = ({ navigation }) => {
   const handleQuickScenarioPress = (scenario) => {
     console.log('Quick Scenario selected:', scenario.title);
     
+    // ✅ Check if dates are selected first
+    if (!selectedDates || !selectedDates.checkInDate || !selectedDates.checkOutDate) {
+      Alert.alert(
+        'Select Dates First',
+        'Please select check-in and check-out dates using the booking widget above before selecting a package.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     // Find package by category
     const pkg = packages.find(p => p.category === scenario.category);
     
     if (pkg) {
       const navParams = { 
         packageId: pkg._id,
-        ...(selectedDates && { ...selectedDates })
+        ...selectedDates
       };
       
       // ✅ Add default roomQuantity for rooms_only packages
@@ -163,9 +173,19 @@ const HomeScreen = ({ navigation }) => {
   const handlePackagePress = (pkg) => {
     console.log('Package selected:', pkg.name);
     
+    // ✅ Check if dates are selected first
+    if (!selectedDates || !selectedDates.checkInDate || !selectedDates.checkOutDate) {
+      Alert.alert(
+        'Select Dates First',
+        'Please select check-in and check-out dates using the booking widget above before selecting a package.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     const navParams = { 
       packageId: pkg._id,
-      ...(selectedDates && { ...selectedDates })
+      ...selectedDates
     };
     
     // ✅ Add default roomQuantity for rooms_only packages

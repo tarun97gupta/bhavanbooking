@@ -110,9 +110,35 @@ const PackageDetailScreen = ({ route, navigation }) => {
             );
             setAvailability(result.data);
             console.log('✅ Availability checked:', result.available);
+            
+            // ✅ If not available, show alert and navigate back to home
+            if (!result.available) {
+                Alert.alert(
+                    'Not Available',
+                    `${packageData?.name || 'This package'} is not available for the selected dates. Please choose different dates or another package.`,
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                console.log('❌ Package not available, navigating to Home');
+                                navigation.navigate('MainTabs');
+                            }
+                        }
+                    ]
+                );
+            }
         } catch (error) {
             console.error('Error checking availability:', error);
-            Alert.alert('Availability Check Failed', error.message);
+            Alert.alert(
+                'Availability Check Failed', 
+                error.message,
+                [
+                    {
+                        text: 'Go Back',
+                        onPress: () => navigation.navigate('MainTabs')
+                    }
+                ]
+            );
         } finally {
             setCheckingAvailability(false);
         }
@@ -155,8 +181,18 @@ const PackageDetailScreen = ({ route, navigation }) => {
             return;
         }
 
+        // ✅ Extra safety check - navigate to home if not available
         if (availability && !availability.available) {
-            Alert.alert('Not Available', 'This package is not available for the selected dates.');
+            Alert.alert(
+                'Not Available', 
+                'This package is not available for the selected dates. Please choose different dates or another package.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => navigation.navigate('MainTabs')
+                    }
+                ]
+            );
             return;
         }
 
@@ -544,14 +580,16 @@ const PackageDetailScreen = ({ route, navigation }) => {
                 <TouchableOpacity
                     style={[
                         styles.continueButton,
-                        checkingAvailability && styles.continueButtonDisabled
+                        (checkingAvailability || (availability && !availability.available)) && styles.continueButtonDisabled
                     ]}
                     onPress={handleContinue}
-                    disabled={checkingAvailability}
+                    disabled={checkingAvailability || (availability && !availability.available)}
                     activeOpacity={0.8}
                 >
                     {checkingAvailability ? (
                         <ActivityIndicator size="small" color={colors.white} />
+                    ) : (availability && !availability.available) ? (
+                        <Text style={styles.continueButtonText}>Not Available</Text>
                     ) : (
                         <Text style={styles.continueButtonText}>Continue</Text>
                     )}

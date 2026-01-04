@@ -121,6 +121,19 @@ export const removeToken = async () => {
 };
 
 /**
+* Remove user data (logout)
+* @returns {Promise<void>}
+*/
+export const removeUser = async () => {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+  } catch (error) {
+    console.error('Error removing user data:', error);
+    throw error;
+  }
+};
+
+/**
 * Clear all app data (useful for testing)
 * @returns {Promise<void>}
 */

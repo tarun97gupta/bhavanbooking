@@ -40,7 +40,7 @@ const BookingSuccessScreen = ({ navigation, route }) => {
 
     const handleViewBookings = () => {
         // Navigate to Bookings tab
-        navigation.navigate('MainTabs', { screen: 'Bookings' });
+        navigation.navigate('MainTabs', { screen: 'BookingsTab' });
     };
 
     const handleGoHome = () => {

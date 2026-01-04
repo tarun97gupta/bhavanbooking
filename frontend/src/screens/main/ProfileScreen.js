@@ -138,7 +138,14 @@ const ProfileScreen = ({ onLogout }) => {
                 {
                     text: 'Logout',
                     style: 'destructive',
-                    onPress: onLogout
+                    onPress: () => {
+                        console.log('👋 User confirmed logout, calling onLogout...');
+                        if (onLogout) {
+                            onLogout();
+                        } else {
+                            console.error('❌ onLogout prop is undefined!');
+                        }
+                    }
                 }
             ]
         );
