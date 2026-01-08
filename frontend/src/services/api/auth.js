@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import axios from 'axios';
 import { getToken } from '../../utils/storage';
 
-const API_URL =  'http://192.168.29.78:3000/api';
+const API_URL =  'http://192.168.119.234:3000/api';
 
 console.log('API_URL:', API_URL);
 

@@ -201,7 +201,7 @@ const BookingsScreen = ({ navigation }) => {
         );
     };
 
-    return (
+  return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
             <View style={styles.header}>
@@ -270,14 +270,14 @@ const BookingsScreen = ({ navigation }) => {
                     {bookings.map((booking) => renderBookingCard(booking))}
                 </ScrollView>
             )}
-        </View>
-    );
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.white,
+  container: {
+    flex: 1,
+    backgroundColor: colors.white,
     },
     header: {
         paddingHorizontal: spacing.lg,
@@ -323,27 +323,27 @@ const styles = StyleSheet.create({
     },
     centerContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
         paddingHorizontal: spacing.xl,
     },
     loadingText: {
         marginTop: spacing.md,
         fontSize: 14,
         color: colors.textSecondary,
-    },
+  },
     emptyTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: colors.text,
+    color: colors.text,
         marginTop: spacing.md,
         marginBottom: spacing.xs,
-    },
+  },
     emptySubtitle: {
         fontSize: 14,
-        color: colors.textSecondary,
-        textAlign: 'center',
-    },
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
 
     // Booking Card
     bookingCard: {
