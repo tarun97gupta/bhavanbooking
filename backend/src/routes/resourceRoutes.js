@@ -1,8 +1,7 @@
 import express from 'express';
 import Resource from '../models/Resource.js';
-import Booking from '../models/Booking.js';
 import mongoose from 'mongoose';
-import protectRoute  from '../middleware/auth.middleware.js';
+// Authentication removed - app is now public
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
@@ -27,7 +26,7 @@ const router = express.Router();
  * @query   facilityType (optional) - Filter by facility type
  * @query   category (optional) - Filter by category (for guest rooms)
  */
-router.get('/', protectRoute, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { facilityType, category } = req.query;
 
@@ -68,7 +67,7 @@ router.get('/', protectRoute, async (req, res) => {
  * @access  Public (authenticated users)
  * @params  facilityType - one of: guest_room, function_hall, dining_hall, mini_hall
  */
-router.get('/facility/:facilityType', protectRoute, async (req, res) => {
+router.get('/facility/:facilityType', async (req, res) => {
     try {
         const { facilityType } = req.params;
 
@@ -109,7 +108,7 @@ router.get('/facility/:facilityType', protectRoute, async (req, res) => {
  * @desc    Get all guest rooms grouped by category
  * @access  Public (authenticated users)
  */
-router.get('/guest-rooms', protectRoute, async (req, res) => {
+router.get('/guest-rooms', async (req, res) => {
     try {
         const guestRooms = await Resource.find({
             facilityType: 'guest_room',
@@ -146,7 +145,7 @@ router.get('/guest-rooms', protectRoute, async (req, res) => {
  * @desc    Get single resource by ID
  * @access  Public (authenticated users)
  */
-router.get('/:id', protectRoute, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -197,7 +196,7 @@ router.get('/:id', protectRoute, async (req, res) => {
  * @access  Public (authenticated users)
  * @body    { resourceId, checkInDate, checkOutDate, quantity }
  */
-router.post('/check-availability', protectRoute, async (req, res) => {
+router.post('/check-availability', async (req, res) => {
     try {
         const { resources, checkInDate, checkOutDate } = req.body;
 
@@ -321,35 +320,10 @@ router.post('/check-availability', protectRoute, async (req, res) => {
             // Booking B: 16-18 Jan
             // These overlap because: 17 > 16 AND 15 < 18
 
-            // Convert dayjs objects to Date objects for MongoDB query
-            const checkInDate = checkIn.toDate();
-            const checkOutDate = checkOut.toDate();
-
-            const overlappingBookings = await Booking.find({
-                'resources.resource': resourceId,
-                status: { $in: ['confirmed', 'checked_in'] }, // Only count active bookings
-                checkInDate: { $lt: checkOutDate },  // Booking starts before our check-out
-                checkOutDate: { $gt: checkInDate }   // Booking ends after our check-in
-            });
-
-            // ==================== CALCULATE BOOKED UNITS ====================
-
-            let bookedUnits = 0;
-
-            // Loop through each overlapping booking
-            overlappingBookings.forEach(booking => {
-                // Loop through resources in each booking
-                booking.resources.forEach(bookingResource => {
-                    // If this booking includes our resource, add the quantity
-                    if (bookingResource.resource.toString() === resourceId) {
-                        bookedUnits += bookingResource.quantity;
-                    }
-                });
-            });
-
             // ==================== CALCULATE AVAILABLE UNITS ====================
-
-            const availableUnits = resource.totalUnits - bookedUnits;
+            // Note: No booking system, so all units are always available
+            const bookedUnits = 0;
+            const availableUnits = resource.totalUnits;
             const isAvailable = availableUnits >= quantity;
 
             // If not available, set overall flag to false
@@ -403,7 +377,7 @@ router.post('/check-availability', protectRoute, async (req, res) => {
  * @access  Admin only
  * @body    { name, description, facilityType, basePrice, capacity, totalUnits, ... }
  */
-router.post('/', protectRoute, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const {
             name,
@@ -521,7 +495,7 @@ router.post('/', protectRoute, async (req, res) => {
  * @access  Admin only
  * @body    { fields to update }
  */
-router.put('/:id', protectRoute, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -608,7 +582,7 @@ router.put('/:id', protectRoute, async (req, res) => {
  * @desc    Deactivate resource (soft delete)
  * @access  Admin only
  */
-router.delete('/:id', protectRoute, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -626,22 +600,7 @@ router.delete('/:id', protectRoute, async (req, res) => {
             });
         }
 
-        const activeBookings = await Booking.find({
-            'resources.resource': id,
-            status: { $in: ['confirmed', 'checked_in'] },
-            checkOutDate: { $gte: dayjs.utc().startOf('day').toDate() }
-        })
-
-        if (activeBookings.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Cannot deactivate resource. Please cancel the active bookings first.`,
-                activeBookingsCount: activeBookings.length,
-                activeBookings,
-                instruction: 'Go to Bookings > Cancel each booking > Then retry deleting this resource'
-            });
-        }
-
+        // No booking system, so we can directly deactivate
         resource.isActive = false;
         await resource.save();
 
@@ -666,7 +625,7 @@ router.delete('/:id', protectRoute, async (req, res) => {
  * @desc    Get all resources (including inactive) for admin panel
  * @access  Admin only
  */
-router.get('/admin/all', protectRoute, async (req, res) => {
+router.get('/admin/all', async (req, res) => {
     try {
         const resources = await Resource.find({}).select('-__v').sort({
             facilityType: 1,

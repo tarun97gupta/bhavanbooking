@@ -1,96 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import AuthStack from './AuthStack';
-import MainStack from './MainStack';
-import SplashScreen from '../screens/onboarding/SplashScreen';
-import { getToken, removeToken, removeUser } from '../utils/storage';
-import authService from '../services/api/auth';
+import { createStackNavigator } from '@react-navigation/stack';
+import SplashScreen from '../screens/SplashScreen';
+import HomeScreen from '../screens/HomeScreen';
+import PackageDetailScreen from '../screens/PackageDetailScreen';
+import EnquiryFormScreen from '../screens/EnquiryFormScreen';
+import EnquirySuccessScreen from '../screens/EnquirySuccessScreen';
+
+const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
 
-  // Check if user has valid token on app load
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await getToken();
-      
-      if (token) {
-        console.log('🔍 Found token, verifying with backend...');
-        
-        try {
-          // Verify token with backend
-          const response = await authService.verifyToken(token);
-          
-          console.log('✅ Token is valid');
-          console.log('User:', response.user);
-          
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error('❌ Token verification failed:', error.message);
-          console.log('Removing invalid token...');
-          
-          // Token is invalid or expired, remove it
-          await removeToken();
-          setIsAuthenticated(false);
-        }
-      } else {
-        console.log('ℹ️ No token found');
-        setIsAuthenticated(false);
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // This function will be called after successful login
-  const handleLoginSuccess = () => {
-    console.log('🎉 Login success callback triggered, re-checking auth...');
-    checkAuthStatus();
-  };
-
-  // This function will be called when user logs out
-  const handleLogout = async () => {
-    try {
-      console.log('🚪 Logout triggered...');
-      await removeToken();
-      await removeUser();
-      console.log('✅ Token and user data removed');
-      setIsAuthenticated(false);
-      console.log('✅ isAuthenticated set to false');
-    } catch (error) {
-      console.error('❌ Error during logout:', error);
-    }
-  };
-
-  // Handle splash screen finish
   const handleSplashFinish = () => {
     setShowSplash(false);
   };
 
-  // Show splash screen first (every time app opens)
-  if (showSplash || isLoading) {
+  // Show splash screen first
+  if (showSplash) {
     return <SplashScreen onFinish={handleSplashFinish} />;
   }
 
-  // Log the current authentication state
-  console.log('🔐 AppNavigator render - isAuthenticated:', isAuthenticated);
-
   return (
-    <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
-      {isAuthenticated ? (
-        <MainStack onLogout={handleLogout} />
-      ) : (
-        <AuthStack onLoginSuccess={handleLoginSuccess} />
-      )}
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="PackageDetail" component={PackageDetailScreen} />
+        <Stack.Screen name="EnquiryForm" component={EnquiryFormScreen} />
+        <Stack.Screen 
+          name="EnquirySuccess" 
+          component={EnquirySuccessScreen}
+          options={{
+            gestureEnabled: false, // Prevent swipe back
+          }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 };

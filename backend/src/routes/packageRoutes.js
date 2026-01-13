@@ -2,14 +2,13 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Package from '../models/Package.js';
 import Resource from '../models/Resource.js';
-import protectRoute from '../middleware/auth.middleware.js';
+// Authentication removed - app is now public
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
-import Booking from '../models/Booking.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -30,7 +29,7 @@ const router = express.Router();
  * @query   category (optional) - Filter by category (rooms_only, function_hall, full_venue, etc.)
  */
 
-router.get('/', protectRoute, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { category } = req.query;
 
@@ -68,7 +67,7 @@ router.get('/', protectRoute, async (req, res) => {
  * @access  Public (authenticated users)
  */
 
-router.get('/popular/list', protectRoute, async (req, res) => {
+router.get('/popular/list', async (req, res) => {
     try {
         // Get packages with highest bookingCount or marked as featured
         const packages = await Package.find({ isActive: true })
@@ -101,7 +100,7 @@ router.get('/popular/list', protectRoute, async (req, res) => {
  * @params  category - one of: rooms_only, rooms_dining, function_hall_only, function_hall_dining, mini_hall, full_venue
  */
 
-router.get('/category/:category', protectRoute, async (req, res) => {
+router.get('/category/:category', async (req, res) => {
     try {
         const { category } = req.params;
         const validCategories = [
@@ -154,7 +153,7 @@ router.get('/category/:category', protectRoute, async (req, res) => {
  * @access  Admin only (currently just protected, add isAdmin later)
  */
 
-router.get('/admin/all', protectRoute, async (req, res) => {
+router.get('/admin/all', async (req, res) => {
     try {
 
         const packages = await Package.find({}).populate('includes.resources.resource', 'name facilityType category').select('-__v').sort({ category: 1, displayOrder: 1, createdAt: -1 });
@@ -194,7 +193,7 @@ router.get('/admin/all', protectRoute, async (req, res) => {
  * @access  Public (authenticated users)
  */
 
-router.get('/:id', protectRoute, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -248,7 +247,7 @@ router.get('/:id', protectRoute, async (req, res) => {
  * @note    Be careful updating resources - affects existing bookings
  */
 
-router.put('/:id', protectRoute, async (req, res) => {
+router.put('/:id', async (req, res) => {
 
     try {
         const { id } = req.params;
@@ -288,24 +287,8 @@ router.put('/:id', protectRoute, async (req, res) => {
         
         // Check if sensitive fields are being updated
         const requestedUpdates = Object.keys(req.body);
-        const hasSensitiveUpdate = requestedUpdates.some(field => sensitiveFields.includes(field));
-        
-        if (hasSensitiveUpdate) {
-            // Check if package has active bookings
-            const activeBookings = await Booking.countDocuments({
-                packageId: id,
-                status: { $in: ['confirmed', 'checked_in'] }
-            });
-            
-            if (activeBookings > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Cannot update ${sensitiveFields.join(', ')} as package has ${activeBookings} active booking(s). This would affect existing bookings.`
-                });
-            }
-        }
-
-         // Validate resource IDs if includes.resources is being updated
+        // No booking system, so we can update freely
+        // Validate resource IDs if includes.resources is being updated
          if (req.body.includes && req.body.includes.resources) {
             for (const item of req.body.includes.resources) {
                 if (item.resource) {
@@ -367,7 +350,7 @@ router.put('/:id', protectRoute, async (req, res) => {
  * @note    Won't delete if there are active bookings
  */
 
-router.delete('/:id', protectRoute, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -389,35 +372,7 @@ router.delete('/:id', protectRoute, async (req, res) => {
             });
         }
 
-        // Check if package has active bookings
-        const activeBookings = await Booking.find({
-            packageId: id,
-            status: { $in: ['confirmed', 'pending', 'checked_in'] },
-            checkOutDate: { $gte: new Date() }
-        });
-
-        if (activeBookings.length > 0) {
-            // Format booking details for admin
-            const bookingDetails = activeBookings.map(booking => ({
-                bookingId: booking._id,
-                bookingReferenceId: booking.bookingReferenceId,
-                customerName: booking.guestDetails.fullName,
-                customerPhone: booking.guestDetails.phoneNumber,
-                checkInDate: booking.checkInDate,
-                checkOutDate: booking.checkOutDate,
-                status: booking.status,
-                totalPrice: booking.pricing?.finalAmount || 0
-            }));
-            
-            return res.status(400).json({
-                success: false,
-                message: `Cannot deactivate package. Please cancel the active bookings first.`,
-                activeBookingsCount: activeBookings.length,
-                activeBookings: bookingDetails,
-                instruction: 'Go to Bookings > Cancel each booking > Then retry deleting this package'
-            });
-        }
-
+        // No booking system, so we can directly deactivate
         // Soft delete - just set isActive to false
         pkg.isActive = false;
         await pkg.save();
@@ -451,7 +406,7 @@ router.delete('/:id', protectRoute, async (req, res) => {
  *          }
  * @returns { breakdown, totalAmount }
  */
-router.post('/:id/calculate-price', protectRoute, async (req, res) => {
+router.post('/:id/calculate-price', async (req, res) => {
     try {
         const { id } = req.params;
         const { checkInDate, checkOutDate, roomQuantity, numberOfGuests } = req.body;
@@ -713,7 +668,7 @@ router.post('/:id/calculate-price', protectRoute, async (req, res) => {
  */
 
 
-router.post('/', protectRoute, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const {
             name,

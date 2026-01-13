@@ -1,11 +1,10 @@
 import express from 'express';
 import 'dotenv/config';
-import authRoutes from './routes/authRoutes.js';
 import { connectDB } from './lib/db.js';
 import cors from 'cors';
 import resourceRoutes from './routes/resourceRoutes.js';
 import packageRoutes from './routes/packageRoutes.js';
-import bookingRoutes from './routes/bookingRoutes.js';
+import enquiryRoutes from './routes/enquiryRoutes.js';
 
 const app = express();
 
@@ -19,10 +18,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use("/api/auth", authRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/packages", packageRoutes);
-app.use("/api/bookings", bookingRoutes);
+app.use("/api/enquiries", enquiryRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

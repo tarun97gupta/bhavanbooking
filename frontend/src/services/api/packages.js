@@ -1,5 +1,29 @@
-import { api } from './auth';
+import axios from 'axios';
 
+// API Configuration
+// ⚠️ IMPORTANT: Update this IP to match your backend server's IP address
+const API_URL = 'http://192.168.29.78:3000/api';
+
+// Create axios instance
+const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    timeout: 10000,
+});
+
+// Response interceptor for logging
+api.interceptors.response.use(
+    (response) => {
+        console.log('✅ API Response:', response.config.method?.toUpperCase(), response.config.url);
+        return response;
+    },
+    (error) => {
+        console.error('❌ API Error:', error.response?.data?.message || error.message);
+        throw error;
+    }
+);
 
 /**
  * Package Service
