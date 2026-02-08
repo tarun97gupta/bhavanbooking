@@ -94,69 +94,6 @@ const packageService = {
             const errorMessage = error.response?.data?.message || 'Failed to fetch package details';
             throw new Error(errorMessage);
         }
-    },
-
-    /**
-     * Fetch popular packages
-     * @returns {Promise<Array>} Array of popular packages
-     */
-    fetchPopularPackages: async () => {
-        try {
-            console.log('📦 Fetching popular packages...');
-            
-            const response = await api.get('/packages/popular/list');
-            
-            console.log('✅ Popular packages fetched:', response.data.count);
-            
-            return {
-                success: true,
-                packages: response.data.data,
-                count: response.data.count
-            };
-        } catch (error) {
-            console.error('Error fetching popular packages:', error);
-            
-            if (error.message === 'Network Error' || !error.response) {
-                throw new Error('Cannot connect to server.');
-            }
-            
-            const errorMessage = error.response?.data?.message || 'Failed to fetch popular packages';
-            throw new Error(errorMessage);
-        }
-    },
-    calculatePrice: async (packageId, checkInDate, checkOutDate, roomQuantity = null) => {
-        try {
-            console.log('💰 Calculating price for package:', packageId);
-            console.log('Dates:', checkInDate, '-', checkOutDate);
-            if (roomQuantity) console.log('Room Quantity:', roomQuantity);
-            
-            const requestData = {
-                checkInDate,
-                checkOutDate
-            };
-            
-            if (roomQuantity) {
-                requestData.roomQuantity = roomQuantity;
-            }
-            
-            const response = await api.post(`/packages/${packageId}/calculate-price`, requestData);
-            
-            console.log('✅ Price calculated:', response.data.pricing.finalAmount);
-            
-            return {
-                success: true,
-                data: response.data
-            };
-        } catch (error) {
-            console.error('Error calculating price:', error);
-            
-            if (error.message === 'Network Error' || !error.response) {
-                throw new Error('Cannot connect to server.');
-            }
-            
-            const errorMessage = error.response?.data?.message || 'Failed to calculate price';
-            throw new Error(errorMessage);
-        }
     }
 }
 

@@ -1,3 +1,8 @@
+/**
+ * PackageDetailScreen
+ * Displays detailed information about a selected package
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -6,7 +11,6 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -16,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../styles/colors';
 import spacing from '../styles/spacing';
 import packageService from '../services/api/packages';
+import LoadingScreen from '../components/common/LoadingScreen';
+import ContactModal from '../components/common/ContactModal';
 
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = width;
@@ -28,6 +34,7 @@ const PackageDetailScreen = ({ route, navigation }) => {
   const [packageData, setPackageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showContactModal, setShowContactModal] = useState(false);
   const flatListRef = useRef(null);
 
   useEffect(() => {
@@ -55,19 +62,11 @@ const PackageDetailScreen = ({ route, navigation }) => {
   };
 
   const handleEnquireNow = () => {
-    navigation.navigate('EnquiryForm', {
-      packageId: packageData._id,
-      packageName: packageData.name,
-    });
+    setShowContactModal(true);
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading package details...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading package details..." />;
   }
 
   if (!packageData) {
@@ -85,42 +84,49 @@ const PackageDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  // Images array - only computed when packageData is available
-  const placeholderText = packageData?.name 
-    ? packageData.name.split(' ').slice(0, 2).join('+')
+  // Prepare images for display
+  const placeholderText = packageData?.name
+    ? packageData.name.split(' ').slice(0, 2).join('+') || 'Package'
     : 'Package';
-  
+
   const images =
-    packageData?.images && packageData.images.length > 0
-      ? packageData.images
-      : [`https://placehold.co/400x200/0D34B7/FFFFFF?text=${placeholderText}`];
+    packageData.images && packageData.images.length > 0
+      ? packageData.images.map((img, index) => ({
+          id: index.toString(),
+          uri: img,
+        }))
+      : [
+          {
+            id: '1',
+            uri: `https://placehold.co/800x400/0D34B7/FFFFFF?text=${placeholderText}`,
+          },
+        ];
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + spacing.sm, paddingBottom: spacing.sm },
+        ]}
+      >
         <TouchableOpacity
-          style={styles.headerButton}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.headerButton}
         >
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            {packageName?.replace(' Booking', '').replace(' Package', '') || 'Package Details'}
-          </Text>
-        </View>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {packageData.name.replace(' Booking', '').replace(' Package', '')}
+        </Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Content */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
+      {/* Scrollable Content */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Image Carousel */}
-        <View style={styles.imageCarouselContainer}>
+        <View style={styles.imageContainer}>
           <FlatList
             ref={flatListRef}
             data={images}
@@ -129,168 +135,125 @@ const PackageDetailScreen = ({ route, navigation }) => {
             showsHorizontalScrollIndicator={false}
             onScroll={handleImageScroll}
             scrollEventThrottle={16}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.carouselImage} />
+              <Image
+                source={{ uri: item.uri }}
+                style={styles.image}
+                resizeMode="cover"
+              />
             )}
           />
+          {images.length > 1 && (
+            <View style={styles.pagination}>
+              {images.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationDot,
+                    index === currentImageIndex && styles.paginationDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
 
-          {/* Pagination Dots */}
-          <View style={styles.paginationContainer}>
-            {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  currentImageIndex === index && styles.paginationDotActive,
-                ]}
-              />
-            ))}
-            {images.length > 1 && (
-              <View style={styles.paginationCount}>
-                <Text style={styles.paginationCountText}>
-                  {currentImageIndex + 1}/{images.length}
+        {/* Package Information */}
+        <View style={styles.infoContainer}>
+          {/* Package Name & Category */}
+          <View style={styles.section}>
+            <Text style={styles.packageName}>{packageData.name}</Text>
+            {packageData.category && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>
+                  {packageData.category.replace(/_/g, ' ').toUpperCase()}
                 </Text>
               </View>
             )}
           </View>
-        </View>
 
-        {/* Content Container */}
-        <View style={styles.contentContainer}>
-          {/* Package Info */}
-          <View style={styles.section}>
-            <Text style={styles.packageName}>
-              {packageData.name.replace(' Booking', '').replace(' Package', '')}
-            </Text>
-            <Text style={styles.packageDescription}>
-              {packageData.description}
-            </Text>
-
-            {/* Address */}
-            <View style={styles.addressContainer}>
-              <Ionicons
-                name="location-outline"
-                size={16}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.addressText}>
-                14-1-378, Darus Salam, Aghapura, Hyderabad, Telangana 500006
+          {/* Description */}
+          {packageData.description && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.descriptionText}>
+                {packageData.description}
               </Text>
             </View>
-          </View>
+          )}
 
-          {/* Details & Amenities */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Details & Amenities</Text>
-
-            <View style={styles.amenitiesGrid}>
-              {/* Capacity */}
-              {packageData.includes?.resources?.some((r) => r.resource.capacity) && (
-                <View style={styles.amenityItem}>
-                  <Ionicons name="people-outline" size={20} color={colors.text} />
-                  <Text style={styles.amenityText}>
-                    {packageData.includes.resources.reduce(
-                      (max, r) => Math.max(max, r.resource.capacity || 0),
-                      0
-                    )}{' '}
-                    people
-                  </Text>
-                </View>
-              )}
-
-              {/* Stage available (for halls) */}
-              {packageData.category.includes('hall') && (
-                <View style={styles.amenityItem}>
-                  <Ionicons name="easel-outline" size={20} color={colors.text} />
-                  <Text style={styles.amenityText}>Stage available</Text>
-                </View>
-              )}
-
-              {/* AC Available */}
-              <View style={styles.amenityItem}>
-                <Ionicons name="snow-outline" size={20} color={colors.text} />
-                <Text style={styles.amenityText}>AC Available</Text>
+          {/* Included Facilities */}
+          {packageData.includes?.facilities &&
+            packageData.includes.facilities.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Facilities Included</Text>
+                {packageData.includes.facilities.map((facility, index) => (
+                  <View key={index} style={styles.facilitiesItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.success}
+                    />
+                    <Text style={styles.facilitiesText}>{facility}</Text>
+                  </View>
+                ))}
               </View>
-
-              {/* Rooms */}
-              {packageData.includes?.resources?.filter(
-                (r) => r.resource.facilityType === 'guest_room'
-              ).length > 0 && (
-                <View style={styles.amenityItem}>
-                  <Ionicons name="bed-outline" size={20} color={colors.text} />
-                  <Text style={styles.amenityText}>
-                    {packageData.includes.resources
-                      .filter((r) => r.resource.facilityType === 'guest_room')
-                      .reduce((sum, r) => sum + r.quantity, 0)}{' '}
-                    rooms available
-                  </Text>
-                </View>
-              )}
-
-              {/* Parking */}
-              <View style={styles.amenityItem}>
-                <Ionicons name="car-outline" size={20} color={colors.text} />
-                <Text style={styles.amenityText}>Parking Available</Text>
-              </View>
-
-              {/* Kitchen */}
-              {packageData.includes?.dining && (
-                <View style={styles.amenityItem}>
-                  <Ionicons name="restaurant-outline" size={20} color={colors.text} />
-                  <Text style={styles.amenityText}>Kitchen Available</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Rules and Regulations */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Rules and Regulations</Text>
-
-            {packageData.termsAndConditions &&
-            packageData.termsAndConditions.length > 0 ? (
-              packageData.termsAndConditions.map((rule, index) => (
-                <View key={index} style={styles.ruleItem}>
-                  <Ionicons
-                    name="checkmark-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={styles.ruleText}>{rule}</Text>
-                </View>
-              ))
-            ) : (
-              <>
-                <View style={styles.ruleItem}>
-                  <Ionicons name="close-outline" size={18} color={colors.error} />
-                  <Text style={styles.ruleText}>
-                    Alcohol consumption NOT allowed
-                  </Text>
-                </View>
-                <View style={styles.ruleItem}>
-                  <Ionicons
-                    name="checkmark-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={styles.ruleText}>
-                    ID proof required for check-in
-                  </Text>
-                </View>
-                <View style={styles.ruleItem}>
-                  <Ionicons
-                    name="checkmark-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={styles.ruleText}>Advance payment required</Text>
-                </View>
-              </>
             )}
-          </View>
 
-          {/* Pricing Info */}
+          {/* Included Resources */}
+          {packageData.includes?.resources &&
+            packageData.includes.resources.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Included Resources</Text>
+                {packageData.includes.resources.map((resourceItem, index) => (
+                  <View key={index} style={styles.resourceCard}>
+                    <View style={styles.resourceHeader}>
+                      <Ionicons
+                        name={
+                          resourceItem.resource.facilityType === 'guest_room'
+                            ? 'bed'
+                            : resourceItem.resource.facilityType === 'banquet_hall'
+                            ? 'business'
+                            : 'cube'
+                        }
+                        size={24}
+                        color={colors.primary}
+                      />
+                      <View style={styles.resourceInfo}>
+                        <Text style={styles.resourceName}>
+                          {resourceItem.resource.name}
+                        </Text>
+                        <Text style={styles.resourceCapacity}>
+                          Capacity: {resourceItem.resource.capacity} people
+                        </Text>
+                      </View>
+                    </View>
+                    {resourceItem.quantity > 1 && (
+                      <Text style={styles.resourceQuantity}>
+                        Quantity: {resourceItem.quantity}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+          {/* Terms & Conditions */}
+          {packageData.termsAndConditions &&
+            packageData.termsAndConditions.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Terms & Conditions</Text>
+                {packageData.termsAndConditions.map((term, index) => (
+                  <View key={index} style={styles.termItem}>
+                    <View style={styles.termBullet} />
+                    <Text style={styles.termText}>{term}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+          {/* Pricing */}
           {packageData.pricing && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Pricing</Text>
@@ -316,7 +279,11 @@ const PackageDetailScreen = ({ route, navigation }) => {
                             {resource.resource.category || 'Room'}
                           </Text>
                           <Text style={styles.roomPrice}>
-                            ₹ {resource.resource.basePrice?.toLocaleString('en-IN') || 'N/A'} / night
+                            ₹{' '}
+                            {resource.resource.basePrice?.toLocaleString(
+                              'en-IN'
+                            ) || 'N/A'}{' '}
+                            / night
                           </Text>
                         </View>
                       ))}
@@ -329,10 +296,18 @@ const PackageDetailScreen = ({ route, navigation }) => {
             </View>
           )}
         </View>
+
+        {/* Bottom Spacing for fixed button */}
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Bottom Sticky Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom + spacing.sm },
+        ]}
+      >
         <TouchableOpacity
           style={styles.enquireButton}
           onPress={handleEnquireNow}
@@ -347,6 +322,13 @@ const PackageDetailScreen = ({ route, navigation }) => {
           <Text style={styles.enquireButtonText}>Enquire Now</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Contact Modal */}
+      <ContactModal
+        visible={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        packageName={packageData.name}
+      />
     </View>
   );
 };
@@ -354,7 +336,33 @@ const PackageDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.white,
+    textAlign: 'center',
+    marginHorizontal: spacing.md,
+  },
+  content: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -372,14 +380,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.white,
-    paddingHorizontal: spacing.xl,
+    padding: spacing.xl,
   },
   errorText: {
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   backButton: {
     backgroundColor: colors.primary,
@@ -392,53 +400,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // Header
-  header: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.white,
-    textAlign: 'center',
-  },
-
-  // Scroll View
-  scrollView: {
-    flex: 1,
-  },
-
-  // Image Carousel
-  imageCarouselContainer: {
-    width: IMAGE_WIDTH,
+  imageContainer: {
     height: IMAGE_HEIGHT,
+    backgroundColor: colors.border,
     position: 'relative',
   },
-  carouselImage: {
+  image: {
     width: IMAGE_WIDTH,
     height: IMAGE_HEIGHT,
-    resizeMode: 'cover',
   },
-  paginationContainer: {
+  pagination: {
     position: 'absolute',
     bottom: spacing.md,
     left: 0,
@@ -458,99 +429,103 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     width: 24,
   },
-  paginationCount: {
-    position: 'absolute',
-    right: spacing.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  paginationCountText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Content
-  contentContainer: {
-    backgroundColor: colors.white,
+  infoContainer: {
+    padding: spacing.lg,
   },
   section: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    marginBottom: spacing.lg,
   },
-
-  // Package Info
   packageName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: spacing.sm,
   },
-  packageDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.radiusSm,
   },
-  addressContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.white,
   },
-  addressText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-    flex: 1,
-    lineHeight: 18,
-  },
-
-  // Section Title
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: spacing.md,
   },
-
-  // Amenities Grid
-  amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -spacing.xs,
+  descriptionText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 24,
   },
-  amenityItem: {
-    width: '50%',
+  facilitiesItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  amenityText: {
-    fontSize: 14,
+  facilitiesText: {
+    fontSize: 15,
     color: colors.text,
     marginLeft: spacing.sm,
     flex: 1,
   },
-
-  // Rules
-  ruleItem: {
+  resourceCard: {
+    backgroundColor: colors.white,
+    borderRadius: spacing.radiusMd,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resourceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resourceInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  resourceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  resourceCapacity: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  resourceQuantity: {
+    fontSize: 14,
+    color: colors.primary,
+    marginTop: spacing.sm,
+    fontWeight: '500',
+  },
+  termItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
   },
-  ruleText: {
+  termBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textSecondary,
+    marginTop: 8,
+    marginRight: spacing.sm,
+  },
+  termText: {
     fontSize: 14,
     color: colors.text,
-    marginLeft: spacing.sm,
     flex: 1,
     lineHeight: 20,
   },
-
-  // Pricing
   priceCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: spacing.radiusMd,
@@ -595,8 +570,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primary,
   },
-
-  // Bottom Bar
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -607,17 +580,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-
-    // Shadow for iOS
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-
-    // Shadow for Android
     elevation: 8,
   },
   enquireButton: {
@@ -636,4 +602,3 @@ const styles = StyleSheet.create({
 });
 
 export default PackageDetailScreen;
-

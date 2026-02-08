@@ -4,8 +4,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from '../screens/SplashScreen';
 import HomeScreen from '../screens/HomeScreen';
 import PackageDetailScreen from '../screens/PackageDetailScreen';
-import EnquiryFormScreen from '../screens/EnquiryFormScreen';
-import EnquirySuccessScreen from '../screens/EnquirySuccessScreen';
 
 const Stack = createStackNavigator();
 
@@ -30,14 +28,6 @@ const AppNavigator = () => {
       >
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="PackageDetail" component={PackageDetailScreen} />
-        <Stack.Screen name="EnquiryForm" component={EnquiryFormScreen} />
-        <Stack.Screen 
-          name="EnquirySuccess" 
-          component={EnquirySuccessScreen}
-          options={{
-            gestureEnabled: false, // Prevent swipe back
-          }}
-        />
       </Stack.Navigator>
     </NavigationContainer>
   );

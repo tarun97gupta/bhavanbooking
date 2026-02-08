@@ -1,19 +1,17 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import colors from '../styles/colors';
 import spacing from '../styles/spacing';
-
-const { width, height } = Dimensions.get('window');
+import { APP_CONFIG } from '../constants/app';
 
 const SplashScreen = ({ onFinish }) => {
   useEffect(() => {
-    // Show splash for 2 seconds
     const timer = setTimeout(() => {
       onFinish();
-    }, 2000);
+    }, APP_CONFIG.splashScreenDuration);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [onFinish]);
 
   return (
     <View style={styles.container}>
