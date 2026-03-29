@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import packageService from '../services/api/packages';
+import packageService from '../services/packages';
 import colors from '../styles/colors';
 import spacing from '../styles/spacing';
 import { CAROUSEL_IMAGES, APP_CONFIG } from '../constants/app';

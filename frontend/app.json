@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bhavan Booking",
+    "name": "Mathur Vaishya Bhavan",
     "slug": "bhavan-booking",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,10 +22,10 @@
       "supportsTablet": true
     },
     "extra": {
-      "apiUrl": "http://192.168.0.6:3000/api"
+      "eas": {
+        "projectId": "df5204c6-9210-431b-98f2-245fd0a1233a"
+      }
     },
-    "plugins": [
-      "expo-web-browser"
-    ]
+    "owner": "mathur-vaishya-bhavan-hyderabad"
   }
 }

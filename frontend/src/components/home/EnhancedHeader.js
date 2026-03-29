@@ -1,10 +1,10 @@
 /**
  * EnhancedHeader Component
- * Decorative header with patterns, logo, and info badges
+ * Decorative header with patterns, logo, and quick info
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 import spacing from '../../styles/spacing';
@@ -21,21 +21,21 @@ const EnhancedHeader = ({ paddingTop = 0 }) => {
 
       {/* Header Content */}
       <View style={styles.headerContent}>
-        {/* Top Row with Icon */}
+        {/* Logo */}
         <View style={styles.headerTopRow}>
           <View style={styles.logoContainer}>
-            <Ionicons name="business" size={32} color={colors.accent} />
-          </View>
-          <View style={styles.headerBadge}>
-            <Ionicons name="star" size={12} color={colors.accent} />
-            <Text style={styles.badgeText}>Premium Venue</Text>
+            <Image
+              source={require('../../../assets/SplashScreenLogo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         </View>
 
         {/* Main Title Section */}
         <View style={styles.headerTitleSection}>
           <Text style={styles.welcomeText}>Welcome to</Text>
-          <Text style={styles.bhavanText}>Darus Salam Bhavan</Text>
+          <Text style={styles.bhavanText}>Mathur Vaishya Bhavan</Text>
           <View style={styles.titleUnderline} />
           <Text style={styles.taglineText}>Where Memories Are Made</Text>
         </View>
@@ -109,35 +109,24 @@ const styles = StyleSheet.create({
   },
   headerTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
   },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  badgeText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+  logoImage: {
+    width: '88%',
+    height: '88%',
   },
   headerTitleSection: {
     marginBottom: spacing.md,

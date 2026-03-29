@@ -3,12 +3,17 @@
  * Centralized location for all constant values used throughout the app
  */
 
+import { CLOUDINARY } from './cloudinaryImages.js';
+
 // Contact Information
 export const CONTACT_INFO = {
   phone: '+919876543210',
   whatsapp: '+919876543210',
-  email: 'info@darussalambhavan.com',
-  address: '14-1-378, Darus Salam, Aghapura, Hyderabad',
+  email: 'mathurvaishyabhavanhyderabad@gmail.com',
+  /** Used when mapsUrl is not set */
+  address: 'Mathur Vaishya Bhavan, Aghapura, Hyderabad',
+  /** Preferred — opens exact pin in Google Maps */
+  mapsUrl: 'https://maps.app.goo.gl/d47747DoG828TECq8',
 };
 
 // Quick Scenarios Data
@@ -65,22 +70,24 @@ export const CATEGORY_ICONS = {
   rooms_only: 'bed',
 };
 
-// Carousel Images (Placeholders - replace with actual images)
 export const CAROUSEL_IMAGES = [
-  { id: '1', uri: 'https://placehold.co/800x400/0D34B7/FFFFFF?text=Bhavan+View+1' },
-  { id: '2', uri: 'https://placehold.co/800x400/1E4ED8/FFFFFF?text=Bhavan+View+2' },
-  { id: '3', uri: 'https://placehold.co/800x400/2952CC/FFFFFF?text=Bhavan+View+3' },
-  { id: '4', uri: 'https://placehold.co/800x400/3B5EC4/FFFFFF?text=Bhavan+View+4' },
-  { id: '5', uri: 'https://placehold.co/800x400/4D6AB8/FFFFFF?text=Bhavan+View+5' },
+  { id: '1', uri: CLOUDINARY.buildingFull },
+  { id: '2', uri: CLOUDINARY.mainEntrance },
+  { id: '3', uri: CLOUDINARY.parking1 },
+  { id: '4', uri: CLOUDINARY.hall1 },
+  { id: '5', uri: CLOUDINARY.dining1 },
+  { id: '6', uri: CLOUDINARY.miniHall1 },
+  { id: '7', uri: CLOUDINARY.roomShot1 },
+  { id: '8', uri: CLOUDINARY.thirdEntrance1 },
 ];
 
-// About Bhavan Content
+// About Mathur Vaishya Bhavan
 export const ABOUT_CONTENT = {
-  short: 'Welcome to Darus Salam Bhavan, a serene and elegant venue located in the heart of Hyderabad. Our beautiful facility offers a perfect blend of traditional charm and modern amenities, making it an ideal choice for your special occasions...',
-  
+  short: 'Welcome to Mathur Vaishya Bhavan, a serene and elegant venue located in the heart of Hyderabad. Our beautiful facility offers a perfect blend of traditional charm and modern amenities, making it an ideal choice for your special occasions...',
+
   full: {
-    title: 'Welcome to Darus Salam Bhavan',
-    description: `Darus Salam Bhavan is a premier event venue located in the vibrant locality of Aghapura, Hyderabad. With years of experience in hosting memorable events, we have become a trusted name for celebrations of all kinds.
+    title: 'Welcome to Mathur Vaishya Bhavan',
+    description: `Mathur Vaishya Bhavan is a premier event venue located in the vibrant locality of Aghapura, Hyderabad. With years of experience in hosting memorable events, we have become a trusted name for celebrations of all kinds.
 
 Our facility features elegant banquet halls, comfortable guest rooms, and modern amenities that cater to your every need. Whether you're planning a grand wedding, an intimate family gathering, or a corporate event, we provide the perfect setting.`,
     
@@ -94,7 +101,7 @@ Our facility features elegant banquet halls, comfortable guest rooms, and modern
       'Ample parking space',
     ],
     
-    closing: `At Darus Salam Bhavan, we understand that every event is unique and special. Our dedicated team works closely with you to ensure that your vision comes to life, creating memories that last a lifetime.
+    closing: `At Mathur Vaishya Bhavan, we understand that every event is unique and special. Our dedicated team works closely with you to ensure that your vision comes to life, creating memories that last a lifetime.
 
 We pride ourselves on maintaining the highest standards of cleanliness, hospitality, and service excellence. Our attention to detail and commitment to customer satisfaction have made us the preferred choice for countless families and organizations.`,
   },

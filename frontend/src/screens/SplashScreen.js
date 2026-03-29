@@ -31,7 +31,7 @@ const SplashScreen = ({ onFinish }) => {
       <View style={styles.bottomHalf}>
         {/* Welcome text at bottom */}
         <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>Welcome to Bhavan</Text>
+          <Text style={styles.welcomeText}>Welcome to Mathur Vaishya Bhavan</Text>
         </View>
       </View>
     </View>

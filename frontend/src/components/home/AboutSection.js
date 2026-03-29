@@ -13,7 +13,7 @@ import { ABOUT_CONTENT } from '../../constants/app';
 const AboutSection = ({ onReadMore }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>About Darus Salam Bhavan</Text>
+      <Text style={styles.title}>About Mathur Vaishya Bhavan</Text>
       <Text style={styles.text}>{ABOUT_CONTENT.short}</Text>
       <TouchableOpacity
         style={styles.readMoreButton}

@@ -37,9 +37,11 @@ export const openEmail = (subject = '', body = '') => {
 };
 
 /**
- * Open Google Maps with the bhavan's address
+ * Open Google Maps (pinned location if mapsUrl is set, else search by address)
  */
 export const openMaps = () => {
-  const encodedAddress = encodeURIComponent(CONTACT_INFO.address);
-  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
+  const url =
+    CONTACT_INFO.mapsUrl ||
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(CONTACT_INFO.address)}`;
+  Linking.openURL(url);
 };

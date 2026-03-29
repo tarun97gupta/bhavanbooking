@@ -33,7 +33,7 @@ const AboutModal = ({ visible, onClose }) => {
         <View style={styles.modalContent}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>About Darus Salam Bhavan</Text>
+            <Text style={styles.modalTitle}>About Mathur Vaishya Bhavan</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>

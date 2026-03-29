@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../styles/colors';
 import spacing from '../styles/spacing';
-import packageService from '../services/api/packages';
+import packageService from '../services/packages';
 import LoadingScreen from '../components/common/LoadingScreen';
 import ContactModal from '../components/common/ContactModal';
 
@@ -210,13 +210,15 @@ const PackageDetailScreen = ({ route, navigation }) => {
                   <View key={index} style={styles.resourceCard}>
                     <View style={styles.resourceHeader}>
                       <Ionicons
-                        name={
-                          resourceItem.resource.facilityType === 'guest_room'
-                            ? 'bed'
-                            : resourceItem.resource.facilityType === 'banquet_hall'
-                            ? 'business'
-                            : 'cube'
-                        }
+                        name={(() => {
+                          const ft = resourceItem.resource.facilityType;
+                          if (ft === 'guest_room') return 'bed';
+                          if (ft === 'banquet_hall' || ft === 'function_hall')
+                            return 'business';
+                          if (ft === 'dining_hall') return 'restaurant';
+                          if (ft === 'mini_hall') return 'briefcase';
+                          return 'cube';
+                        })()}
                         size={24}
                         color={colors.primary}
                       />
