@@ -89,7 +89,7 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Enhanced Header */}
-      <EnhancedHeader paddingTop={insets.top + spacing.md} />
+      <EnhancedHeader paddingTop={insets.top + spacing.xs} />
 
       {/* Scrollable Content */}
       <ScrollView

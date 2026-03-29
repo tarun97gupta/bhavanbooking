@@ -1,6 +1,5 @@
 /**
- * EnhancedHeader Component
- * Decorative header with patterns, logo, and quick info
+ * EnhancedHeader — compact top bar (logo + title + quick facts)
  */
 
 import React from 'react';
@@ -12,47 +11,51 @@ import spacing from '../../styles/spacing';
 const EnhancedHeader = ({ paddingTop = 0 }) => {
   return (
     <View style={[styles.header, { paddingTop }]}>
-      {/* Background Pattern Overlay */}
       <View style={styles.headerPattern}>
         <View style={styles.patternCircle1} />
         <View style={styles.patternCircle2} />
-        <View style={styles.patternCircle3} />
       </View>
 
-      {/* Header Content */}
       <View style={styles.headerContent}>
-        {/* Logo */}
-        <View style={styles.headerTopRow}>
-          <View style={styles.logoContainer}>
+        {/* Logo + title in one row */}
+        <View style={styles.topRow}>
+          <View style={styles.logoWrap}>
             <Image
               source={require('../../../assets/SplashScreenLogo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
           </View>
+          <View style={styles.titleColumn}>
+            <Text style={styles.welcomeText}>Welcome to</Text>
+            <Text style={styles.bhavanText} numberOfLines={2}>
+              Mathur Vaishya Bhavan
+            </Text>
+            <Text style={styles.taglineText} numberOfLines={1}>
+              Where memories are made
+            </Text>
+          </View>
         </View>
 
-        {/* Main Title Section */}
-        <View style={styles.headerTitleSection}>
-          <Text style={styles.welcomeText}>Welcome to</Text>
-          <Text style={styles.bhavanText}>Mathur Vaishya Bhavan</Text>
-          <View style={styles.titleUnderline} />
-          <Text style={styles.taglineText}>Where Memories Are Made</Text>
-        </View>
-
-        {/* Location Quick Info */}
-        <View style={styles.headerLocationRow}>
-          <View style={styles.locationBadge}>
-            <Ionicons name="location-sharp" size={14} color={colors.white} />
-            <Text style={styles.locationBadgeText}>Hyderabad</Text>
+        {/* Compact chips */}
+        <View style={styles.chipsRow}>
+          <View style={styles.chip}>
+            <Ionicons name="location-sharp" size={11} color={colors.white} />
+            <Text style={styles.chipText} numberOfLines={1}>
+              Hyderabad
+            </Text>
           </View>
-          <View style={styles.locationBadge}>
-            <Ionicons name="time" size={14} color={colors.white} />
-            <Text style={styles.locationBadgeText}>Open Daily</Text>
+          <View style={styles.chip}>
+            <Ionicons name="time" size={11} color={colors.white} />
+            <Text style={styles.chipText} numberOfLines={1}>
+              Open daily
+            </Text>
           </View>
-          <View style={styles.locationBadge}>
-            <Ionicons name="call" size={14} color={colors.white} />
-            <Text style={styles.locationBadgeText}>24/7 Support</Text>
+          <View style={styles.chip}>
+            <Ionicons name="call" size={11} color={colors.white} />
+            <Text style={styles.chipText} numberOfLines={1}>
+              24/7
+            </Text>
           </View>
         </View>
       </View>
@@ -63,123 +66,107 @@ const EnhancedHeader = ({ paddingTop = 0 }) => {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
     position: 'relative',
     overflow: 'hidden',
   },
   headerPattern: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.1,
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.08,
   },
   patternCircle1: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: colors.white,
-    top: -50,
-    right: -50,
+    top: -40,
+    right: -20,
   },
   patternCircle2: {
     position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: colors.white,
-    bottom: -30,
-    left: -30,
-  },
-  patternCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: colors.accent,
-    top: 100,
-    left: 50,
+    bottom: -24,
+    left: -16,
   },
   headerContent: {
     position: 'relative',
     zIndex: 1,
   },
-  headerTopRow: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  logoContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    overflow: 'hidden',
-  },
-  logoImage: {
-    width: '88%',
-    height: '88%',
-  },
-  headerTitleSection: {
-    marginBottom: spacing.md,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: colors.accent,
-    fontWeight: '500',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  bhavanText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.5,
-  },
-  titleUnderline: {
-    width: 60,
-    height: 3,
-    backgroundColor: colors.accent,
-    borderRadius: 2,
     marginBottom: spacing.sm,
   },
+  logoWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    overflow: 'hidden',
+    marginRight: spacing.sm,
+  },
+  logoImage: {
+    width: '86%',
+    height: '86%',
+  },
+  titleColumn: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  welcomeText: {
+    fontSize: 10,
+    color: colors.accent,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  bhavanText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: colors.white,
+    lineHeight: 22,
+    letterSpacing: 0.2,
+  },
   taglineText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.75)',
     fontStyle: 'italic',
-    letterSpacing: 0.3,
+    marginTop: 2,
   },
-  headerLocationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
-  locationBadge: {
+  chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs - 2,
-    borderRadius: 12,
-    flex: 1,
-    marginHorizontal: 2,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
   },
-  locationBadgeText: {
+  chip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    minWidth: 0,
+  },
+  chipText: {
     color: colors.white,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
-    marginLeft: 4,
+    marginLeft: 3,
+    flexShrink: 1,
   },
 });
 
